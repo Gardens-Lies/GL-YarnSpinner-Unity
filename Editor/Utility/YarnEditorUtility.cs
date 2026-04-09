@@ -116,7 +116,7 @@ namespace Yarn.Unity.Editor
             // in ProjectWindowUtil, and used by other parts of the editor
             // to create other kinds of assets (scripts, textures, etc).
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
-                0,
+                EntityId.None,
                 ScriptableObject.CreateInstance<DoCreateYarnScriptAsset>(),
                 "NewYarnScript.yarn",
                 GetYarnDocumentIconTexture(),
@@ -134,7 +134,7 @@ namespace Yarn.Unity.Editor
             // in ProjectWindowUtil, and used by other parts of the editor
             // to create other kinds of assets (scripts, textures, etc).
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
-                0,
+                EntityId.None,
                 ScriptableObject.CreateInstance<DoCreateYarnProjectAsset>(),
                 "NewProject.yarnproject",
                 GetYarnProjectIconTexture(),
@@ -153,7 +153,7 @@ namespace Yarn.Unity.Editor
             // in ProjectWindowUtil, and used by other parts of the editor
             // to create other kinds of assets (scripts, textures, etc).
             ProjectWindowUtil.StartNameEditingIfProjectWindowExists(
-                0,
+                EntityId.None,
                 ScriptableObject.CreateInstance<DoCreateYarnScriptAsset>(),
                 "NewDialoguePresenter.cs",
                 null,
@@ -253,12 +253,12 @@ namespace Yarn.Unity.Editor
 
         // A handler that receives a callback after the user finishes
         // naming a new file.
-        private class DoCreateYarnScriptAsset : UnityEditor.ProjectWindowCallback.EndNameEditAction
+        private class DoCreateYarnScriptAsset : UnityEditor.ProjectWindowCallback.AssetCreationEndAction
         {
             // The user just finished typing (and didn't cancel it by
             // pressing escape or anything.) Commit the action by
             // generating the file on disk.
-            public override void Action(int instanceId, string pathName, string resourceFile)
+            public override void Action(EntityId instanceId, string pathName, string resourceFile)
             {
                 // Produce the asset.
                 Object o = CreateScriptAssetFromTemplate(pathName, resourceFile);
@@ -270,12 +270,12 @@ namespace Yarn.Unity.Editor
 
         // A handler that receives a callback after the user finishes
         // naming a new file.
-        private class DoCreateYarnProjectAsset : UnityEditor.ProjectWindowCallback.EndNameEditAction
+        private class DoCreateYarnProjectAsset : UnityEditor.ProjectWindowCallback.AssetCreationEndAction
         {
             // The user just finished typing (and didn't cancel it by
             // pressing escape or anything.) Commit the action by
             // generating the file on disk.
-            public override void Action(int instanceId, string pathName, string resourceFile)
+            public override void Action(EntityId instanceId, string pathName, string resourceFile)
             {
                 // Produce the asset.
                 var project = YarnProjectUtility.CreateDefaultYarnProject();

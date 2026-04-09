@@ -593,7 +593,7 @@ namespace Yarn.Unity.Editor
             string GetGroupID(GroupAttribute group)
             {
                 var target = property.serializedProperty.serializedObject.targetObject;
-                var uniqueGroupID = $"{target.GetType()}_{target.GetInstanceID()}_group_{group.GroupName}";
+                var uniqueGroupID = $"{target.GetType()}_{target.GetEntityId()}_group_{group.GroupName}";
                 return uniqueGroupID;
             }
 

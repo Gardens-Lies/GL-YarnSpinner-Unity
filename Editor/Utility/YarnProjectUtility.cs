@@ -654,7 +654,7 @@ namespace Yarn.Unity.Editor
         }
 
         [OnOpenAsset(OnOpenAssetAttributeMode.Execute)]
-        public static bool OnOpenAsset(int instanceID)
+        public static bool OnOpenAsset(EntityId instanceID)
         {
             var path = AssetDatabase.GetAssetPath(instanceID);
             var project = AssetDatabase.LoadAssetAtPath<YarnProject>(path);
@@ -682,7 +682,7 @@ namespace Yarn.Unity.Editor
         }
 
         [OnOpenAsset(OnOpenAssetAttributeMode.Validate)]
-        public static bool OnValidateAsset(int instanceID)
+        public static bool OnValidateAsset(EntityId instanceID)
         {
             var path = AssetDatabase.GetAssetPath(instanceID);
             var project = AssetDatabase.LoadAssetAtPath<YarnProject>(path);
