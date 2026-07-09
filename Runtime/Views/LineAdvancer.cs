@@ -38,7 +38,7 @@ namespace Yarn.Unity
         /// <remarks>When <see cref="RequestLineHurryUp"/> is called, if the line is fully visible, the <see cref="runner"/> object will have its <see cref="DialogueRunner.RequestNextLine"/> method called (instead of its <see cref="DialogueRunner.RequestHurryUpLine"/> method).
         /// This behaviour is only the case when the <see cref="separateHurryUpAndAdvanceControls"/> is set to false.
         ///</remarks>
-        [SerializeField] DialoguePresenterBase? presenter;
+        [SerializeField] public DialoguePresenterBase? presenter;
 
         /// <summary>
         /// Should this line advancer use different actions for hurrying up a line and advancing a line?
