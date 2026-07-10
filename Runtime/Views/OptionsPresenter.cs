@@ -134,6 +134,24 @@ namespace Yarn.Unity
             return YarnTask.CompletedTask;
         }
 
+        public async YarnTask FadeUI(float alphaIn, float alphaOut, LineCancellationToken token)
+        {
+            if (canvasGroup != null)
+            {
+                // Fading UI
+                if (useFadeEffect)
+                {
+                    await Effects.FadeAlphaAsync(canvasGroup, alphaIn, alphaOut,
+                        fadeUpDuration, token.HurryUpToken);
+                }
+                else
+                {
+                    // We're not fading, so set the final canvas group's alpha immediately.
+                    canvasGroup.alpha = alphaOut;
+                }
+            }
+        }
+
         /// <summary>
         /// Called by a <see cref="DialogueRunner"/> when a line needs to be
         /// presented, and stores the line as the 'last seen line' so that it
@@ -323,11 +341,7 @@ namespace Yarn.Unity
                 }
             }
 
-            if (useFadeEffect && canvasGroup != null)
-            {
-                // fade up the UI now
-                await Effects.FadeAlphaAsync(canvasGroup, 0, 1, fadeUpDuration, cancellationToken.HurryUpToken);
-            }
+            await FadeUI(0.0f, 1.0f, cancellationToken);
 
             // allow interactivity and wait for an option to be selected
             if (canvasGroup != null)
@@ -347,11 +361,7 @@ namespace Yarn.Unity
                 canvasGroup.blocksRaycasts = false;
             }
 
-            if (useFadeEffect && canvasGroup != null)
-            {
-                // fade down
-                await Effects.FadeAlphaAsync(canvasGroup, 1, 0, fadeDownDuration, cancellationToken.HurryUpToken);
-            }
+            await FadeUI(1.0f, 0.0f, cancellationToken);
 
             // disabling ALL the options views now
             foreach (var optionView in optionViews)
