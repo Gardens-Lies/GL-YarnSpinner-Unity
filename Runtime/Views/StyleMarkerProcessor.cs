@@ -48,8 +48,8 @@ namespace Yarn.Unity
             return new ReplacementMarkerResult(childBuilder.Length - originalLength);
         }
 
-        // Start is called before the first frame update
-        void Start()
+        // Awake is called before the first frame update
+        void Awake()
         {
             if (lineProvider == null)
             {
@@ -61,6 +61,8 @@ namespace Yarn.Unity
                 }
                 lineProvider = (LineProviderBehaviour)runner.LineProvider;
             }
+            
+            lineProvider.DeregisterMarkerProcessor("style");
             lineProvider.RegisterMarkerProcessor("style", this);
 
             // in an ideal world instead of making you write out [style = h1] you could just do [h1]

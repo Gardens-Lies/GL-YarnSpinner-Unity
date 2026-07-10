@@ -91,7 +91,7 @@ public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
     /// Called by Unity when this script is enabled to register itself with <see
     /// cref="lineProvider"/>.
     /// </summary>
-    private void Start()
+    private void Awake()
     {
         if (palette == null)
         {
@@ -116,10 +116,12 @@ public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
 
         foreach (var marker in palette.BasicMarkers)
         {
+            lineProvider.DeregisterMarkerProcessor(marker.Marker);
             lineProvider.RegisterMarkerProcessor(marker.Marker, this);
         }
         foreach (var marker in palette.CustomMarkers)
         {
+            lineProvider.DeregisterMarkerProcessor(marker.Marker);
             lineProvider.RegisterMarkerProcessor(marker.Marker, this);
         }
     }

@@ -5,6 +5,7 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Yarn.Markup;
 using Yarn.Unity.Attributes;
 
@@ -38,7 +39,18 @@ namespace Yarn.Unity
         /// <remarks>When <see cref="RequestLineHurryUp"/> is called, if the line is fully visible, the <see cref="runner"/> object will have its <see cref="DialogueRunner.RequestNextLine"/> method called (instead of its <see cref="DialogueRunner.RequestHurryUpLine"/> method).
         /// This behaviour is only the case when the <see cref="separateHurryUpAndAdvanceControls"/> is set to false.
         ///</remarks>
-        [SerializeField] public DialoguePresenterBase? presenter;
+        public DialoguePresenterBase? presenter 
+        {
+            get => _presenter;
+            set 
+            { 
+                _presenter = value;
+                _presenter?.Typewriter?.ActionMarkupHandlers.Add(this);
+            }
+        }
+
+        [FormerlySerializedAs("presenter")]
+        [SerializeField] DialoguePresenterBase? _presenter;
 
         /// <summary>
         /// Should this line advancer use different actions for hurrying up a line and advancing a line?
