@@ -134,7 +134,7 @@ namespace Yarn.Unity
             return YarnTask.CompletedTask;
         }
 
-        public async YarnTask FadeUI(float alphaIn, float alphaOut, LineCancellationToken token)
+        public async YarnTask FadeUI(float alphaIn, float alphaOut, float duration, LineCancellationToken token)
         {
             if (canvasGroup != null)
             {
@@ -142,7 +142,7 @@ namespace Yarn.Unity
                 if (useFadeEffect)
                 {
                     await Effects.FadeAlphaAsync(canvasGroup, alphaIn, alphaOut,
-                        fadeUpDuration, token.HurryUpToken);
+                        duration, token.HurryUpToken);
                 }
                 else
                 {
@@ -341,7 +341,7 @@ namespace Yarn.Unity
                 }
             }
 
-            await FadeUI(0.0f, 1.0f, cancellationToken);
+            await FadeUI(0.0f, 1.0f, fadeUpDuration, cancellationToken);
 
             // allow interactivity and wait for an option to be selected
             if (canvasGroup != null)
@@ -361,7 +361,7 @@ namespace Yarn.Unity
                 canvasGroup.blocksRaycasts = false;
             }
 
-            await FadeUI(1.0f, 0.0f, cancellationToken);
+            await FadeUI(1.0f, 0.0f, fadeDownDuration, cancellationToken);
 
             // disabling ALL the options views now
             foreach (var optionView in optionViews)

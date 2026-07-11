@@ -232,7 +232,7 @@ namespace Yarn.Unity
         public override async YarnTask OnDialogueCompleteAsync()
         {
             if (canvasGroup != null)
-                await FadeUI(1.0f, 0.0f, new LineCancellationToken());
+                await FadeUI(1.0f, 0.0f, fadeDownDuration, new LineCancellationToken());
         }
 
         /// <inheritdoc/>
@@ -298,7 +298,7 @@ namespace Yarn.Unity
             }
         }
 
-        public async YarnTask FadeUI(float alphaIn, float alphaOut, LineCancellationToken token)
+        public async YarnTask FadeUI(float alphaIn, float alphaOut, float duration, LineCancellationToken token)
         {
             if (canvasGroup != null)
             {
@@ -306,7 +306,7 @@ namespace Yarn.Unity
                 if (useFadeEffect)
                 {
                     await Effects.FadeAlphaAsync(canvasGroup, alphaIn, alphaOut,
-                        fadeUpDuration, token.HurryUpToken);
+                        duration, token.HurryUpToken);
                 }
                 else
                 {
@@ -371,7 +371,7 @@ namespace Yarn.Unity
             if (canvasGroup != null)
             {
                 if (fadeAtEachDialogue || canvasGroup.alpha <= 0.0f)
-                    await FadeUI(0.0f, 1.0f, token);
+                    await FadeUI(0.0f, 1.0f, fadeUpDuration, token);
             }
 
             await Typewriter.RunTypewriter(text, token.HurryUpToken).SuppressCancellationThrow();
@@ -406,7 +406,7 @@ namespace Yarn.Unity
 
             if (canvasGroup != null && canvasGroup.alpha > 0.0f)
             {
-                await FadeUI(1.0f, 0.0f, token);
+                await FadeUI(1.0f, 0.0f, fadeDownDuration, token);
             }
 
             // Ce presenter n'affiche pas les options lui-même.
