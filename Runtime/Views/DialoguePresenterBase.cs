@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-using UnityEngine.Events;
 
 #nullable enable
 
@@ -133,6 +132,14 @@ namespace Yarn.Unity
         }
 #pragma warning restore 0618
 
+        /// <summary>
+        /// Called by the <see cref="DialogueRunner"/> each time the presenters list changes.
+        /// <br></br>
+        /// As presenters can have dependencies between them,
+        /// this method permits to update them automatically without the dev intervention.
+        /// </summary>
+        /// <param name="presenters">Presenters list to sort to.</param>
+        public abstract void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters);
 
         /// <summary>Called by the <see cref="DialogueRunner"/> to signal that
         /// dialogue has started.</summary>

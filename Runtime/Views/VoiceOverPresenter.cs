@@ -3,9 +3,8 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Threading;
 using UnityEngine;
 using Yarn.Unity.Attributes;
 
@@ -246,6 +245,11 @@ namespace Yarn.Unity
         public override YarnTask OnDialogueStartedAsync()
         {
             return YarnTask.CompletedTask;
+        }
+
+        public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
+        {
+            // Empty body
         }
     }
 }

@@ -6,9 +6,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using Yarn.Markup;
 using Yarn.Unity.Attributes;
-using Antlr4.Runtime;
-
-
 
 #nullable enable
 
@@ -411,6 +408,11 @@ namespace Yarn.Unity
 
             // Ce presenter n'affiche pas les options lui-même.
             return null;
+        }
+
+        public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
+        {
+            // Empty body
         }
     }
 }

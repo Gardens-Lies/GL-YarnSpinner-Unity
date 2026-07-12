@@ -397,5 +397,10 @@ namespace Yarn.Unity
 
             return optionView;
         }
+
+        public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
+        {
+            // Empty body
+        }
     }
 }

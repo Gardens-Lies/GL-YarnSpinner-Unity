@@ -251,6 +251,7 @@ namespace Yarn.Unity
         /// </summary>
         [Space]
         [UnityEngine.Serialization.FormerlySerializedAs("dialogueViews")]
+        [HideIf(nameof(autowireDialoguePresenters))]
         [SerializeField] List<DialoguePresenterBase?> dialoguePresenters = new List<DialoguePresenterBase?>();
 
         /// <summary>
@@ -265,6 +266,14 @@ namespace Yarn.Unity
         /// running.
         /// </summary>
         public bool IsDialogueRunning => Dialogue.IsActive;
+
+        /// <summary>
+        /// If <see langword="true"/>, presenters will be automatically 
+        /// get from GameObject's root.
+        /// </summary>
+        [Group("Behaviour")]
+        [Label("Register automatically presenters")]
+        public bool autowireDialoguePresenters = false;
 
         /// <summary>
         /// Whether the dialogue runner will immediately start running dialogue
@@ -388,7 +397,17 @@ namespace Yarn.Unity
         public IEnumerable<DialoguePresenterBase?> DialoguePresenters
         {
             get => dialoguePresenters;
-            set => dialoguePresenters = value.ToList();
+            set
+            {
+                dialoguePresenters = value.ToList();
+                foreach (var presenter in dialoguePresenters)
+                {
+                    if (presenter != null)
+                    {
+                        presenter.RegisterPresenterDependencies(dialoguePresenters);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -462,6 +481,8 @@ namespace Yarn.Unity
             {
                 this.LineProvider.YarnProject = this.YarnProject;
             }
+
+            UpdatePresentersRegister();
         }
 
         /// <summary>
@@ -1171,6 +1192,23 @@ namespace Yarn.Unity
             }
 
             currentOptionsHurryUpSource.Cancel();
+        }
+
+        /// <summary>
+        /// In this version of Yarn Spinner,
+        /// we can actually replace dynamically presenters from the list.
+        /// <br></br>
+        /// This method ensures that we updates the list according to that.
+        /// <br></br>
+        /// If <see cref="autowireDialoguePresenters"/> is <see langword="false"/>,
+        /// then this method does nothing. In this case,
+        /// you'll we have to update <see cref="DialoguePresenters"/> automatically.
+        /// </summary>
+        public void UpdatePresentersRegister()
+        {
+
+            if (autowireDialoguePresenters)
+                DialoguePresenters = GetComponentsInChildren<DialoguePresenterBase>();
         }
 
         void IRequestLineCancellation.RequestLineCancellation(LocalizedLine line)

@@ -654,6 +654,17 @@ namespace Yarn.Unity
         public void OnInputHurryUpOptions() => RequestOptionHurryUp();
         public void OnInputCancelDialogue() => RequestDialogueCancellation();
 
+        public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
+        {
+            foreach (var presenter in presenters)
+            {
+                if (presenter is LinePresenter)
+                {
+                    this.presenter = presenter as LinePresenter;
+                    return; // We can end here
+                }
+            }
+        }
     }
     public interface ILineAdvancerInput
     {
