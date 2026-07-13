@@ -48,20 +48,18 @@ namespace Yarn.Unity
             return new ReplacementMarkerResult(childBuilder.Length - originalLength);
         }
 
-        // Awake is called before the first frame update
-        void Awake()
+        public override void RegisterMarker()
         {
-            if (lineProvider == null)
+
+            var runner = DialogueRunner.FindRunner(this);
+            if (runner == null)
             {
-                var runner = DialogueRunner.FindRunner(this);
-                if (runner == null)
-                {
-                    Debug.LogWarning("Was unable to find a dialogue runner, unable to register the style markup.");
-                    return;
-                }
-                lineProvider = (LineProviderBehaviour)runner.LineProvider;
+                Debug.LogWarning("Was unable to find a dialogue runner, unable to register the style markup.");
+                return;
             }
-            
+            lineProvider = (LineProviderBehaviour)runner.LineProvider;
+
+
             lineProvider.DeregisterMarkerProcessor("style");
             lineProvider.RegisterMarkerProcessor("style", this);
 

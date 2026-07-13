@@ -2,7 +2,6 @@
 Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -17,7 +16,18 @@ namespace Yarn.Unity
     /// <seealso cref="LineProviderBehaviour"/>
     public abstract class ReplacementMarkupHandler : MonoBehaviour, IAttributeMarkerProcessor
     {
+
         /// <inheritdoc/>
         public abstract ReplacementMarkerResult ProcessReplacementMarker(MarkupAttribute marker, StringBuilder childBuilder, List<MarkupAttribute> childAttributes, string localeCode);
+
+        /// <summary>
+        /// Register marker to <see cref="DialogueRunner"/>
+        /// </summary>
+        public abstract void RegisterMarker();
+
+        protected virtual void Awake()
+        {
+            RegisterMarker();
+        }
     }
 }

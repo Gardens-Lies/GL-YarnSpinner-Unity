@@ -2,7 +2,6 @@
 Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
@@ -20,7 +19,7 @@ using Yarn.Unity;
 /// example, if the palette defines a style named "happy", this marker processor
 /// will process tags in a Yarn line named <c>[happy]</c> by inserting the
 /// appropriate TextMeshProp style tags defined for the "happy" style.</remarks>
-public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
+public sealed class PaletteMarkerProcessor : ReplacementMarkupHandler
 {
     /// <summary>
     /// The <see cref="MarkupPalette"/> to use when applying styles.
@@ -87,11 +86,7 @@ public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
         return new ReplacementMarkerResult(diagnostics, 0);
     }
 
-    /// <summary>
-    /// Called by Unity when this script is enabled to register itself with <see
-    /// cref="lineProvider"/>.
-    /// </summary>
-    private void Awake()
+    public override void RegisterMarker()
     {
         if (palette == null)
         {
@@ -103,16 +98,13 @@ public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
             return;
         }
 
-        if (lineProvider == null)
+        var runner = DialogueRunner.FindRunner(this);
+        if (runner == null)
         {
-            var runner = DialogueRunner.FindRunner(this);
-            if (runner == null)
-            {
-                Debug.LogWarning("Was unable to find a dialogue runner, unable to register the markup palettes.");
-                return;
-            }
-            lineProvider = (LineProviderBehaviour)runner.LineProvider;
+            Debug.LogWarning("Was unable to find a dialogue runner, unable to register the markup palettes.");
+            return;
         }
+        lineProvider = (LineProviderBehaviour)runner.LineProvider;
 
         foreach (var marker in palette.BasicMarkers)
         {
