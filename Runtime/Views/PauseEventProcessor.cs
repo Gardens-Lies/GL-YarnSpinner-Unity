@@ -30,8 +30,11 @@ namespace Yarn.Unity
 
         public void OnLineDisplayBegin(MarkupParseResult line, TMP_Text text)
         {
-            pauses = new();
+
             // grabbing out any pauses inside the line
+            // We add a dummy pause at start because there's currently
+            // a bug where pauses can make Hurry Up Line behaviour weird.
+            pauses = new() { { 0, 0 } };
             foreach (var attribute in line.Attributes)
             {
                 if (attribute.Name != "pause")
@@ -41,6 +44,9 @@ namespace Yarn.Unity
 
                 if (attribute.Properties.TryGetValue("pause", out MarkupValue value))
                 {
+                    if (attribute.Position == 0)
+                        pauses.Remove(0);
+
                     // depending on the property value we need to take a different path this is because they have made it an integer or a float which are roughly the same.
                     // But they also might have done something weird and we need to handle that
                     switch (value.Type)
