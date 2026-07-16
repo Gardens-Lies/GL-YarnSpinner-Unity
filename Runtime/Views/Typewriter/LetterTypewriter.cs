@@ -6,7 +6,6 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 
 namespace Yarn.Unity
 {
-    using System;
     using System.Collections.Generic;
     using System.Threading;
     using UnityEngine;
@@ -61,27 +60,19 @@ namespace Yarn.Unity
                     markupHandler.OnLineDisplayBegin(line, TextElement);
                 }
 
-                double secondsPerCharacter = 0;
-                if (CharactersPerSecond > 0)
-                {
-                    secondsPerCharacter = 1.0 / CharactersPerSecond;
-                }
-
                 // Get the count of visible characters from TextMesh to exclude markup characters
                 var visibleCharacterCount = TextElement.GetTextInfo(line.Text).characterCount;
 
-                // Start with a full time budget so that we immediately show the first character
-                double accumulatedDelay = secondsPerCharacter;
-
                 // Go through each character of the line and letting the
                 // processors know about it
+                double accumulatedDelay = GetSecondsPerCharacter();
                 for (int i = 0; i < visibleCharacterCount; i++)
                 {
                     // If we don't already have enough accumulated time budget
                     // for a character, wait until we do (or until we're
                     // cancelled)
-                    while (!cancellationToken.IsCancellationRequested
-                        && (accumulatedDelay < secondsPerCharacter))
+                    while (!cancellationToken.IsCancellationRequested 
+                        && accumulatedDelay < GetSecondsPerCharacter())
                     {
                         var timeBeforeYield = Time.timeAsDouble;
                         await YarnTask.Yield();
@@ -100,7 +91,7 @@ namespace Yarn.Unity
 
                     TextElement.maxVisibleCharacters += 1;
 
-                    accumulatedDelay -= secondsPerCharacter;
+                    accumulatedDelay -= GetSecondsPerCharacter();
                 }
 
                 // We've finished showing every character (or we were
@@ -147,5 +138,8 @@ namespace Yarn.Unity
             }
             TextElement.maxVisibleCharacters = 0;
         }
+
+        private double GetSecondsPerCharacter() 
+            => CharactersPerSecond > 0f ? 1.0 / (double)CharactersPerSecond : 0.0;
     }
 }
