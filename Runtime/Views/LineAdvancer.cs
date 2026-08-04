@@ -199,11 +199,11 @@ namespace Yarn.Unity
         // this only works if the line advancer is added as a processor onto the presenters typewriter
         // but that is ok as that is the default
         // as people replace those defaults with more complex views and presenters they will also want to replace the line advancer anyways
-        private enum PresentationStatus
+        public enum PresentationStatus
         {
             Unknown, LineBegan, LineWaiting, OptionsBegan, OptionsWaiting,
         }
-        private PresentationStatus status = PresentationStatus.Unknown;
+        public PresentationStatus Status { get; private set; } = PresentationStatus.Unknown;
 
         private void Start()
         {
@@ -425,7 +425,7 @@ namespace Yarn.Unity
             // A new line has come in, so reset the number of times we've seen a
             // request to skip.
             ResetLineTracking();
-            status = PresentationStatus.LineBegan;
+            Status = PresentationStatus.LineBegan;
 
             frameContentReceived = Time.frameCount;
 
@@ -441,7 +441,7 @@ namespace Yarn.Unity
         public override YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] dialogueOptions, LineCancellationToken cancellationToken)
         {
             ResetLineTracking();
-            status = PresentationStatus.OptionsBegan;
+            Status = PresentationStatus.OptionsBegan;
 
             frameContentReceived = Time.frameCount;
 
@@ -451,7 +451,7 @@ namespace Yarn.Unity
         private void ResetLineTracking()
         {
             numberOfAdvancesThisLine = 0;
-            status = PresentationStatus.Unknown;
+            Status = PresentationStatus.Unknown;
         }
 
 
@@ -465,7 +465,7 @@ namespace Yarn.Unity
             // in this mode we NEED to be in a state where a line showing, regardless of it's completion state
             if (!separateHurryUpAndAdvanceControls)
             {
-                if (!(status == PresentationStatus.LineBegan || status == PresentationStatus.LineWaiting))
+                if (!(Status == PresentationStatus.LineBegan || Status == PresentationStatus.LineWaiting))
                 {
                     return;
                 }
@@ -499,7 +499,7 @@ namespace Yarn.Unity
                 }
                 else
                 {
-                    if (status == PresentationStatus.LineWaiting)
+                    if (Status == PresentationStatus.LineWaiting)
                     {
                         RequestNextLine();
                     }
@@ -566,7 +566,7 @@ namespace Yarn.Unity
 
             if (!separateHurryUpAndAdvanceControls)
             {
-                if (status == PresentationStatus.OptionsBegan || status == PresentationStatus.OptionsWaiting)
+                if (Status == PresentationStatus.OptionsBegan || Status == PresentationStatus.OptionsWaiting)
                 {
                     runner.RequestHurryUpOption();
                 }
@@ -634,13 +634,13 @@ namespace Yarn.Unity
 
         public void OnLineDisplayComplete()
         {
-            if (status == PresentationStatus.LineBegan)
+            if (Status == PresentationStatus.LineBegan)
             {
-                status = PresentationStatus.LineWaiting;
+                Status = PresentationStatus.LineWaiting;
             }
-            else if (status == PresentationStatus.OptionsBegan)
+            else if (Status == PresentationStatus.OptionsBegan)
             {
-                status = PresentationStatus.OptionsWaiting;
+                Status = PresentationStatus.OptionsWaiting;
             }
         }
 
