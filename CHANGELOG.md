@@ -9,6 +9,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Added Rewired integration to Yarn Spinner+.
+- Updated Yarn Spinner DLLs to target .NET Standard 2.1.
+- Removed a number of unnecessary .NET Standard 2.0 supporting DLLs.
+- Fixed an issue where IL2CPP builds would fail on Unity 6.5.
+
 ## [3.2.7] 2026-07-04
 
 ### Changed
