@@ -252,6 +252,7 @@ namespace Yarn.Unity
                     });
                     break;
                 case InputMode.InputActions:
+#if USE_INPUTSYSTEM
                     SetupInput<LineAdvancerInput.InputActions>(i =>
                     {
                         if (hasTransferredLegacyMapping)
@@ -267,6 +268,9 @@ namespace Yarn.Unity
 
                         hasTransferredLegacyMapping = true;
                     });
+#else
+                    Debug.LogWarning("This line advancer was configured to use the Unity Input System, but it's not installed. Please install the Input System package.");
+#endif
                     break;
 
                 case InputMode.LegacyInputAxes:
