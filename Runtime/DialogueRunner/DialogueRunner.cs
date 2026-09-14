@@ -437,6 +437,8 @@ namespace Yarn.Unity
 
         private YarnTaskCompletionSource? dialogueCompletionSource;
         private YarnTaskCompletionSource? dialogueCancellationCompletion;
+        
+        private bool isFirstLineFromNode;
 
         internal ICommandDispatcher CommandDispatcher
         {
@@ -666,6 +668,9 @@ namespace Yarn.Unity
 
         private void OnNodeCompleted(string completedNodeName)
         {
+            
+            isFirstLineFromNode = false;
+            
             onNodeComplete?.Invoke(completedNodeName);
             foreach (var presenter in dialoguePresenters)
             {
@@ -685,6 +690,9 @@ namespace Yarn.Unity
 
         private void OnNodeStarted(string startedNodeName)
         {
+            
+            isFirstLineFromNode = true;
+            
             onNodeStart?.Invoke(startedNodeName);
             foreach (var presenter in dialoguePresenters)
             {
@@ -825,8 +833,30 @@ namespace Yarn.Unity
                 HurryUpToken = currentLineHurryUpSource.Token,
             };
 
-            var pendingTasks = new HashSet<YarnTask>();
+            // We have to run this pass after StartDialogue
+            // because in this version of Yarn Spinner,
+            // presenters can be loaded while reading actual script.
+            if (isFirstLineFromNode)
+            {
 
+                onDialogueStart?.Invoke();
+
+                var tasks = new List<YarnTask>();
+                foreach (var view in DialoguePresenters)
+                {
+
+                    if (view == null)
+                    {
+                        continue;
+                    }
+                    tasks.Add(view.OnDialogueStartedAsync());
+                }
+
+                await YarnTask.WhenAll(tasks);
+                isFirstLineFromNode = false;
+            }
+
+            var pendingTasks = new HashSet<YarnTask>();
             foreach (var view in this.dialoguePresenters)
             {
                 if (view == null)
