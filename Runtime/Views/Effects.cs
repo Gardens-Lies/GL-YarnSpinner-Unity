@@ -60,5 +60,22 @@ namespace Yarn.Unity
 
             canvas.alpha = to;
         }
+
+        /// <summary>
+        /// Fades a canvas group alpha value, or sets it immediately.
+        /// </summary>
+        /// <inheritdoc cref="FadeAlphaAsync(CanvasGroup, float, float, float, CancellationToken)" path="/param"/>
+        /// <param name="isFaded">If <see langword="false"/>, the alpha is set to
+        /// <paramref name="to"/> immediately.</param>
+        public static YarnTask FadeOrSetAlphaAsync(CanvasGroup canvas, bool isFaded,
+            float from, float to, float duration, CancellationToken token)
+        {
+            if (isFaded)
+            {
+                return FadeAlphaAsync(canvas, from, to, duration, token);
+            }
+            canvas.alpha = to;
+            return YarnTask.CompletedTask;
+        }
     }
 }

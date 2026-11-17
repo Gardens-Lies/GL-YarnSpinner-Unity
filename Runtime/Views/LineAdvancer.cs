@@ -3,6 +3,7 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -38,14 +39,18 @@ namespace Yarn.Unity
         /// </summary>
         /// <remarks>When <see cref="RequestHurryUpContent"/> is called, if the line is fully visible, the <see cref="runner"/> object will have its <see cref="DialogueRunner.RequestNextContent"/> method called (instead of its <see cref="DialogueRunner.RequestHurryUpContent"/> method).
         /// This behaviour is only the case when the <see cref="separateHurryUpAndAdvanceControls"/> is set to false.
+        /// <para>
+        /// The line advancer also subscribes to the typewriters of all the runner's presenters:
+        /// this property is the first <see cref="LinePresenter"/> among them.
+        /// </para>
         ///</remarks>
-        public DialoguePresenterBase? presenter 
+        public DialoguePresenterBase? presenter
         {
             get => _presenter;
-            set 
-            { 
+            set
+            {
                 _presenter = value;
-                _presenter?.Typewriter?.ActionMarkupHandlers.Add(this);
+                SubscribeToTypewriter(value);
             }
         }
 
@@ -186,19 +191,14 @@ namespace Yarn.Unity
             if (!separateHurryUpAndAdvanceControls)
             {
                 // we register ourselves as being a temporal processor for all presenters
-                foreach (var presenter in runner.DialoguePresenters)
-                {
-                    if (presenter != null)
-                    {
-                        presenter.Typewriter?.ActionMarkupHandlers.Add(this);
-                    }
-                }
+                SubscribeToTypewriter(_presenter);
+                SubscribeToTypewriters(runner.DialoguePresenters);
                 // and then add ourselves to that list of presenters also so we can get the higher level messages too
-                var listOfPresenters = new List<DialoguePresenterBase?>(runner.DialoguePresenters)
+                // (unless we are already in it, for instance with autowired presenters)
+                if (!runner.DialoguePresenters.Contains(this))
                 {
-                    this
-                };
-                runner.DialoguePresenters = listOfPresenters;
+                    runner.AddPresenter(this);
+                }
             }
         }
 
@@ -576,15 +576,42 @@ namespace Yarn.Unity
             return;
         }
 
+        /// <summary>
+        /// Subscribes to the typewriters of the new presenters, and updates <see cref="presenter"/>.
+        /// </summary>
+        /// <inheritdoc cref="DialoguePresenterBase.RegisterPresenterDependencies" path="/param"/>
         public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
         {
-            foreach (var presenter in presenters)
+            SubscribeToTypewriters(presenters);
+
+            var linePresenter = presenters.OfType<LinePresenter>().FirstOrDefault(p => p != null);
+            if (linePresenter != null)
             {
-                if (presenter is LinePresenter)
-                {
-                    this.presenter = presenter as LinePresenter;
-                    return; // We can end here
-                }
+                _presenter = linePresenter;
+            }
+        }
+
+        private void SubscribeToTypewriters(IEnumerable<DialoguePresenterBase?> presenters)
+        {
+            foreach (var presenterToFollow in presenters)
+            {
+                SubscribeToTypewriter(presenterToFollow);
+            }
+        }
+
+        /// <summary>
+        /// Adds this line advancer to the markup handlers of the presenter's typewriter, once.
+        /// </summary>
+        private void SubscribeToTypewriter(DialoguePresenterBase? presenterToFollow)
+        {
+            if (presenterToFollow == null)
+            {
+                return;
+            }
+            var handlers = presenterToFollow.Typewriter?.ActionMarkupHandlers;
+            if (handlers != null && !handlers.Contains(this))
+            {
+                handlers.Add(this);
             }
         }
     }

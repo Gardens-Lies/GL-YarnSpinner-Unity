@@ -25,7 +25,8 @@ namespace Yarn.Unity
     public sealed class StyleMarkerProcessor : ReplacementMarkupHandler
     {
         /// <summary>
-        /// The line provider this markup processor needs to register itself with
+        /// The line provider this markup processor needs to register itself with.
+        /// If empty, the line provider of the dialogue runner is used.
         /// </summary>
         [SerializeField]
         public LineProviderBehaviour? lineProvider;
@@ -60,18 +61,15 @@ namespace Yarn.Unity
 
         public override void RegisterMarker()
         {
-
-            var runner = DialogueRunner.FindRunner(this);
-            if (runner == null)
+            var provider = FindLineProvider(lineProvider);
+            if (provider == null)
             {
-                Debug.LogWarning("Was unable to find a dialogue runner, unable to register the style markup.");
+                Debug.LogWarning("Was unable to find a line provider, unable to register the style markup.");
                 return;
             }
-            lineProvider = (LineProviderBehaviour)runner.LineProvider;
 
-
-            lineProvider.DeregisterMarkerProcessor("style");
-            lineProvider.RegisterMarkerProcessor("style", this);
+            provider.DeregisterMarkerProcessor("style");
+            provider.RegisterMarkerProcessor("style", this);
 
             // in an ideal world instead of making you write out [style = h1] you could just do [h1]
             // but TMP doesn't allow access to the list of styles, and as such also can't get their names

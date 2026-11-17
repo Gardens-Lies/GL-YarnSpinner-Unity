@@ -113,13 +113,13 @@ namespace Yarn.Unity
         public bool useFadeEffect = true;
 
         /// <summary>
-        /// Fades UI at each dialogue.
+        /// Shows and hides the UI for each line.
         /// </summary>
-        /// <remarks>This value is only used when <see cref="useFadeEffect"/> is
-        /// <see langword="true"/>.</remarks>
+        /// <remarks>If <see langword="false"/>, the UI stays visible between lines:
+        /// it's only hidden before options and at the end of dialogue.
+        /// Without <see cref="useFadeEffect"/>, the UI is shown and hidden immediately.</remarks>
         /// <seealso cref="useFadeEffect"/>
         [Group("Fade")]
-        [ShowIf(nameof(useFadeEffect))]
         public bool fadeAtEachDialogue = true;
 
         /// <summary>
@@ -232,10 +232,10 @@ namespace Yarn.Unity
         }
 
         /// <inheritdoc/>
-        public override async YarnTask OnDialogueCompleteAsync(CancellationToken token)
+        public override YarnTask OnDialogueCompleteAsync(CancellationToken token)
         {
-            if (canvasGroup != null)
-                await FadeUI(1.0f, 0.0f, fadeDownDuration, new LineCancellationToken());
+            var fadeToken = new LineCancellationToken { NextContentToken = token, HurryUpToken = token };
+            return FadeUITo(0.0f, fadeDownDuration, fadeToken);
         }
 
         /// <inheritdoc/>
@@ -301,22 +301,35 @@ namespace Yarn.Unity
             }
         }
 
+        /// <summary>
+        /// Fades the UI from <paramref name="alphaIn"/> to <paramref name="alphaOut"/>,
+        /// or sets it to <paramref name="alphaOut"/> immediately without <see cref="useFadeEffect"/>.
+        /// </summary>
+        /// <param name="alphaIn">The alpha at the start of the fade.</param>
+        /// <param name="alphaOut">The alpha at the end of the fade.</param>
+        /// <param name="duration">How long the fade lasts, in seconds.</param>
+        /// <param name="token">The fade ends immediately when its hurry up token is cancelled.</param>
         public async YarnTask FadeUI(float alphaIn, float alphaOut, float duration, LineCancellationToken token)
         {
             if (canvasGroup != null)
             {
-                // Fading UI
-                if (useFadeEffect)
-                {
-                    await Effects.FadeAlphaAsync(canvasGroup, alphaIn, alphaOut,
-                        duration, token.HurryUpToken);
-                }
-                else
-                {
-                    // We're not fading, so set the final canvas group's alpha immediately.
-                    canvasGroup.alpha = alphaOut;
-                }
+                await Effects.FadeOrSetAlphaAsync(canvasGroup, useFadeEffect, alphaIn, alphaOut,
+                    duration, token.HurryUpToken);
             }
+        }
+
+        /// <summary>
+        /// Fades the UI from its current alpha to <paramref name="alphaOut"/>.
+        /// A partial fade is shorter: <paramref name="duration"/> is the time of a full fade.
+        /// </summary>
+        private YarnTask FadeUITo(float alphaOut, float duration, LineCancellationToken token)
+        {
+            if (canvasGroup == null)
+            {
+                return YarnTask.CompletedTask;
+            }
+            float alphaIn = canvasGroup.alpha;
+            return FadeUI(alphaIn, alphaOut, duration * Mathf.Abs(alphaOut - alphaIn), token);
         }
 
         /// <summary>Presents a line using the configured text view.</summary>
@@ -371,11 +384,8 @@ namespace Yarn.Unity
 
             Typewriter.PrepareForContent(text);
 
-            if (canvasGroup != null)
-            {
-                if (fadeAtEachDialogue || canvasGroup.alpha <= 0.0f)
-                    await FadeUI(0.0f, 1.0f, fadeUpDuration, token);
-            }
+            // fading up the UI (if it's already visible, nothing happens)
+            await FadeUITo(1.0f, fadeUpDuration, token);
 
             await Typewriter.RunTypewriter(text, token.HurryUpToken).SuppressCancellationThrow();
 
@@ -390,6 +400,13 @@ namespace Yarn.Unity
             }
 
             Typewriter.ContentWillDismiss();
+
+            if (fadeAtEachDialogue)
+            {
+                // we fade down the UI
+                await FadeUITo(0.0f, fadeDownDuration, token);
+            }
+
             Typewriter.ContentDidDismiss();
         }
 
@@ -398,19 +415,11 @@ namespace Yarn.Unity
         // choix (voir la doc officielle : un presenter qui ne gère pas les
         // options doit juste retourner null). On profite de ce hook pour
         // faire disparaître le canvas de ligne juste avant que les options
-        // ne s'affichent, sans toucher au comportement fadeAtEachDialogue.
-        //
-        // On garde le RunLineAsync existant intact : sa condition
-        // "canvasGroup.alpha <= 0.0f" fera automatiquement réapparaître le
-        // canvas dès la ligne suivante après les options, pas besoin d'y
-        // toucher.
-        public override async YarnTask<DialogueOption> RunOptionsAsync(DialogueOption[] options, LineCancellationToken token)
+        // ne s'affichent. La ligne suivante le réaffiche (RunLineAsync
+        // part de l'alpha actuel).
+        public override async YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] options, LineCancellationToken token)
         {
-
-            if (canvasGroup != null && canvasGroup.alpha > 0.0f)
-            {
-                await FadeUI(1.0f, 0.0f, fadeDownDuration, token);
-            }
+            await FadeUITo(0.0f, fadeDownDuration, token);
 
             // Ce presenter n'affiche pas les options lui-même.
             return null;

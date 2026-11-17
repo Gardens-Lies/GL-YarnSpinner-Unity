@@ -29,8 +29,9 @@ public sealed class PaletteMarkerProcessor : ReplacementMarkupHandler
 
     /// <summary>
     /// The line provider to register this markup processor with.
+    /// If empty, the line provider of the dialogue runner is used.
     /// </summary>
-    [Tooltip("The LineProviderBehaviour to register this markup processor with.")]
+    [Tooltip("The LineProviderBehaviour to register this markup processor with. If empty, the dialogue runner's one.")]
     public LineProviderBehaviour? lineProvider;
 
     /// <inheritdoc/>
@@ -98,23 +99,22 @@ public sealed class PaletteMarkerProcessor : ReplacementMarkupHandler
             return;
         }
 
-        var runner = DialogueRunner.FindRunner(this);
-        if (runner == null)
+        var provider = FindLineProvider(lineProvider);
+        if (provider == null)
         {
-            Debug.LogWarning("Was unable to find a dialogue runner, unable to register the markup palettes.");
+            Debug.LogWarning("Was unable to find a line provider, unable to register the markup palettes.");
             return;
         }
-        lineProvider = (LineProviderBehaviour)runner.LineProvider;
 
         foreach (var marker in palette.BasicMarkers)
         {
-            lineProvider.DeregisterMarkerProcessor(marker.Marker);
-            lineProvider.RegisterMarkerProcessor(marker.Marker, this);
+            provider.DeregisterMarkerProcessor(marker.Marker);
+            provider.RegisterMarkerProcessor(marker.Marker, this);
         }
         foreach (var marker in palette.CustomMarkers)
         {
-            lineProvider.DeregisterMarkerProcessor(marker.Marker);
-            lineProvider.RegisterMarkerProcessor(marker.Marker, this);
+            provider.DeregisterMarkerProcessor(marker.Marker);
+            provider.RegisterMarkerProcessor(marker.Marker, this);
         }
     }
 }

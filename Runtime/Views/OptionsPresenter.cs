@@ -143,21 +143,20 @@ namespace Yarn.Unity
             return YarnTask.CompletedTask;
         }
 
+        /// <summary>
+        /// Fades the UI from <paramref name="alphaIn"/> to <paramref name="alphaOut"/>,
+        /// or sets it to <paramref name="alphaOut"/> immediately without <see cref="useFadeEffect"/>.
+        /// </summary>
+        /// <param name="alphaIn">The alpha at the start of the fade.</param>
+        /// <param name="alphaOut">The alpha at the end of the fade.</param>
+        /// <param name="duration">How long the fade lasts, in seconds.</param>
+        /// <param name="token">The fade ends immediately when its hurry up token is cancelled.</param>
         public async YarnTask FadeUI(float alphaIn, float alphaOut, float duration, LineCancellationToken token)
         {
             if (canvasGroup != null)
             {
-                // Fading UI
-                if (useFadeEffect)
-                {
-                    await Effects.FadeAlphaAsync(canvasGroup, alphaIn, alphaOut,
-                        duration, token.HurryUpToken);
-                }
-                else
-                {
-                    // We're not fading, so set the final canvas group's alpha immediately.
-                    canvasGroup.alpha = alphaOut;
-                }
+                await Effects.FadeOrSetAlphaAsync(canvasGroup, useFadeEffect, alphaIn, alphaOut,
+                    duration, token.HurryUpToken);
             }
         }
 

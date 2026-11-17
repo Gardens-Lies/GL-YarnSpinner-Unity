@@ -331,9 +331,14 @@ namespace Yarn.Unity
         private YarnTaskCompletionSource? dialogueCancellationCompletion;
 
         /// <summary>
-        /// <see langword="true"/> between the start of a node and its first line.
+        /// The presenters told that the current dialogue has started.
         /// </summary>
-        private bool isFirstLineFromNode;
+        /// <remarks>
+        /// Presenters can be loaded by the Yarn script itself, after <see cref="RunDialogue"/>
+        /// started the dialogue: they are told before the next piece of content.
+        /// </remarks>
+        private readonly HashSet<DialoguePresenterBase> startedPresenters =
+            new HashSet<DialoguePresenterBase>();
 
         /// <summary>
         /// Called by Unity to set up the object.
@@ -518,6 +523,7 @@ namespace Yarn.Unity
 
             // Wait for all views to finish doing their clean up
             await YarnTask.WhenAll(pendingTasks);
+            startedPresenters.Clear();
 
             // finally we flag the cancellation as done
             // this lets stop know that all views have been informed as to the cancellation
@@ -527,7 +533,7 @@ namespace Yarn.Unity
         /// <inheritdoc />
         public async ValueTask HandleNodeComplete(string node, CancellationToken token)
         {
-            isFirstLineFromNode = false;
+            await NotifyNewPresentersDialogueStartedAsync(token);
 
             foreach (var presenter in dialoguePresenters)
             {
@@ -548,7 +554,7 @@ namespace Yarn.Unity
         /// <inheritdoc />
         public async ValueTask HandleNodeStart(string node, CancellationToken token)
         {
-            isFirstLineFromNode = true;
+            await NotifyNewPresentersDialogueStartedAsync(token);
 
             foreach (var presenter in dialoguePresenters)
             {
@@ -608,6 +614,8 @@ namespace Yarn.Unity
         /// <inheritdoc />
         public async ValueTask HandleCommand(Command command, CancellationToken token)
         {
+            await NotifyNewPresentersDialogueStartedAsync(token);
+
             // if we have an existing cancellation source we will still dispose of it before creating a new one linked to the dialogue token
             // but this is HIGHLY likely indicative of an issue inside the dialogue runner
             if (currentContentCancellationSource != null)
@@ -668,15 +676,6 @@ namespace Yarn.Unity
                 NextContentToken = currentContentCancellationSource.Token,
                 HurryUpToken = currentContentHurryUpSource.Token,
             };
-
-            // We have to run this pass after RunDialogue
-            // because in this version of Yarn Spinner,
-            // presenters can be loaded while reading actual script.
-            if (isFirstLineFromNode)
-            {
-                await NotifyDialogueStartedAsync(token);
-                isFirstLineFromNode = false;
-            }
 
             var pendingTasks = new HashSet<YarnTask>();
             foreach (var view in this.dialoguePresenters)
@@ -744,6 +743,8 @@ namespace Yarn.Unity
                 return;
             }
 
+            await NotifyNewPresentersDialogueStartedAsync(metaTokenSource.Token);
+
             var localisedLine = await LineProvider.GetLocalizedLineAsync(line, metaTokenSource.Token);
             localisedLine.Source = this;
 
@@ -758,6 +759,8 @@ namespace Yarn.Unity
         /// <inheritdoc />
         public async ValueTask<int> HandleOptions(OptionSet options, CancellationToken token)
         {
+            await NotifyNewPresentersDialogueStartedAsync(token);
+
             // if we have an existing cancellation source for this option group we will still dispose of it before creating a new one linked to the dialogue token
             // but this is HIGHLY likely indicative of an issue inside the dialogue runner
             if (currentContentCancellationSource != null)
@@ -974,6 +977,7 @@ namespace Yarn.Unity
             }
 
             dialogueCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, this.destroyCancellationToken);
+            startedPresenters.Clear();
             LineProvider.YarnProject = yarnProject;
 
             Dialogue.Program = yarnProject.Program;
@@ -981,20 +985,7 @@ namespace Yarn.Unity
 
             ApplySaliencyStrategy();
 
-            var tasks = new List<YarnTask>();
-            foreach (var view in DialoguePresenters)
-            {
-                if (view == null)
-                {
-                    continue;
-                }
-                if (view.enabled == false)
-                {
-                    continue;
-                }
-                tasks.Add(view.OnDialogueStartedAsync(dialogueCancellationSource.Token));
-            }
-            await YarnTask.WhenAll(tasks);
+            await NotifyNewPresentersDialogueStartedAsync(dialogueCancellationSource.Token);
 
             // Run dialogue and wait for it to finish!
             await Dialogue.Start(dialogueCancellationSource.Token);
@@ -1098,20 +1089,21 @@ namespace Yarn.Unity
 
         /// <summary>
         /// Calls <see cref="DialoguePresenterBase.OnDialogueStartedAsync(CancellationToken)"/>
-        /// on each enabled presenter, and waits for all of them.
+        /// on each enabled presenter not told yet during this dialogue, and waits for them.
         /// </summary>
-        private async YarnTask NotifyDialogueStartedAsync(CancellationToken token)
+        private YarnTask NotifyNewPresentersDialogueStartedAsync(CancellationToken token)
         {
-            var tasks = new List<YarnTask>();
+            List<YarnTask>? tasks = null;
             foreach (var presenter in dialoguePresenters)
             {
-                if (presenter == null || presenter.enabled == false)
+                if (presenter == null || !presenter.enabled || !startedPresenters.Add(presenter))
                 {
                     continue;
                 }
+                tasks ??= new List<YarnTask>();
                 tasks.Add(presenter.OnDialogueStartedAsync(token));
             }
-            await YarnTask.WhenAll(tasks);
+            return tasks == null ? YarnTask.CompletedTask : YarnTask.WhenAll(tasks);
         }
     }
 }
