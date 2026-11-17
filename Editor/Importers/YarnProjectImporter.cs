@@ -19,6 +19,12 @@ using UnityEditor.Localization;
 using UnityEngine.Localization.Tables;
 #endif
 
+#if UNITY_6000_6_OR_NEWER
+using Unity.Scripting.LifecycleManagement;
+#else
+using Yarn.Unity.Shim;
+#endif
+
 #nullable enable
 
 namespace Yarn.Unity.Editor
@@ -27,7 +33,7 @@ namespace Yarn.Unity.Editor
     /// Imports a .yarnproject file and produces a <see cref="YarnProject"/>
     /// asset.
     /// </summary>
-    [ScriptedImporter(6, new[] { "yarnproject" }, 1000), HelpURL("https://docs.yarnspinner.dev/using-yarnspinner-with-unity/importing-yarn-files/yarn-projects")]
+    [ScriptedImporter(7, new[] { "yarnproject" }, 1000), HelpURL("https://docs.yarnspinner.dev/using-yarnspinner-with-unity/importing-yarn-files/yarn-projects")]
     [InitializeOnLoad]
     public class YarnProjectImporter : ScriptedImporter
     {
@@ -46,8 +52,9 @@ namespace Yarn.Unity.Editor
         /// Yarn Project.
         /// </summary>
         [System.Serializable]
-        public class SerializedDeclaration
+        public partial class SerializedDeclaration
         {
+            [NoAutoStaticsCleanup]
             internal static List<Yarn.IType> BuiltInTypesList = new List<Yarn.IType> {
                 Yarn.Types.String,
                 Yarn.Types.Boolean,
@@ -100,71 +107,6 @@ namespace Yarn.Unity.Editor
 
                 sourceYarnAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(sourceScriptPath);
             }
-        }
-
-        private class FunctionDeclarationReceiver : IActionRegistration
-        {
-            public List<Declaration> FunctionDeclarations = new();
-
-            public void AddCommandHandler(string commandName, System.Delegate handler) { }
-
-            public void AddCommandHandler(string commandName, MethodInfo methodInfo) { }
-
-            public void AddFunction(string name, System.Delegate implementation) { }
-
-            public void RegisterFunctionDeclaration(string name, System.Type returnType, System.Type[] parameterTypes)
-            {
-                if (Types.TypeMappings.TryGetValue(returnType, out var returnYarnType) == false)
-                {
-                    Debug.LogError($"Can't register function {name}: can't convert return type {returnType} to a Yarn type");
-                    return;
-                }
-
-                var typeBuilder = new FunctionTypeBuilder().WithReturnType(returnYarnType);
-
-
-                for (int i = 0; i < parameterTypes.Length; i++)
-                {
-                    System.Type? parameter = parameterTypes[i];
-
-                    bool isParamsArray = false;
-
-                    if (i == parameterTypes.Length - 1 && parameter.IsArray)
-                    {
-                        // If this is the last parameter and it is an array,
-                        // treat it as though it were a params array and use the
-                        // type of the array
-                        parameter = parameter.GetElementType();
-                        isParamsArray = true;
-                    }
-
-                    if (Types.TypeMappings.TryGetValue(parameter, out var parameterYarnType) == false)
-                    {
-                        Debug.LogError($"Can't register function {name}: can't convert parameter {i} type {parameterYarnType} to a Yarn type");
-                        return;
-                    }
-
-                    if (isParamsArray)
-                    {
-                        typeBuilder = typeBuilder.WithVariadicParameterType(parameterYarnType);
-                    }
-                    else
-                    {
-                        typeBuilder = typeBuilder.WithParameter(parameterYarnType);
-                    }
-                }
-
-                var decl = new DeclarationBuilder()
-                    .WithName(name)
-                    .WithType(typeBuilder.FunctionType)
-                    .Declaration;
-
-                this.FunctionDeclarations.Add(decl);
-            }
-
-            public void RemoveCommandHandler(string commandName) { }
-
-            public void RemoveFunction(string name) { }
         }
 
         /// <summary>
@@ -261,6 +203,9 @@ namespace Yarn.Unity.Editor
             }
         }
 #endif
+
+        public bool useCustomLineTagger;
+        public string? lineTaggerClass;
 
         /// <summary>
         /// Gets a <see cref="Project"/> loaded from this importer's asset file,
@@ -375,7 +320,8 @@ namespace Yarn.Unity.Editor
             Project project;
             try
             {
-                project = Yarn.Compiler.Project.LoadFromFile(ctx.assetPath);
+                var unityProjectRoot = Path.GetDirectoryName(Application.dataPath);
+                project = Yarn.Compiler.Project.LoadFromFile(ctx.assetPath, unityProjectRoot);
             }
             catch (System.Exception)
             {
@@ -397,8 +343,16 @@ namespace Yarn.Unity.Editor
                 return;
             }
 
+            importData.ProjectFileVersion = project.FileVersion;
+
             importData.sourceFilePatterns = new();
             importData.sourceFilePatterns.AddRange(project.SourceFilePatterns);
+
+            importData.definitionFilePatterns = new();
+            if (project.Definitions != null)
+            {
+                importData.definitionFilePatterns.AddRange(project.Definitions);
+            }
 
             importData.baseLanguageName = project.BaseLanguage;
 
@@ -461,21 +415,11 @@ namespace Yarn.Unity.Editor
                     importData.yarnFiles.Add(AssetDatabase.LoadAssetAtPath<TextAsset>(scriptPath));
                 }
 
-                // Get all function declarations found in the Unity project
-                var functionDeclarationReceiver = new FunctionDeclarationReceiver();
-
-                foreach (var registrationAction in Actions.ActionRegistrationMethods)
-                {
-                    registrationAction(functionDeclarationReceiver, RegistrationType.Compilation);
-                }
-
                 // Now to compile the scripts associated with this project.
-                var job = CompilationJob.CreateFromFiles(project.SourceFiles);
-                job.LanguageVersion = project.FileVersion;
-                job.Declarations = functionDeclarationReceiver.FunctionDeclarations;
 
                 try
                 {
+                    var job = CompilationJob.CreateFromProject(project);
                     compilationResult = Compiler.Compiler.Compile(job);
                 }
                 catch (System.Exception e)
@@ -500,7 +444,7 @@ namespace Yarn.Unity.Editor
                     var errorGroups = errors.GroupBy(e => e.FileName);
                     foreach (var errorGroup in errorGroups)
                     {
-                        if (errorGroup.Key == null)
+                        if (string.IsNullOrWhiteSpace(errorGroup.Key))
                         {
                             // ok so we have no file for some reason
                             // so these are errors currently not tied to a file
@@ -575,6 +519,68 @@ namespace Yarn.Unity.Editor
                     return;
                 }
 
+                // logging the warnings also
+                var warnings = compilationResult.Diagnostics.Where(d => d.Severity == Diagnostic.DiagnosticSeverity.Warning);
+                if (warnings.Count() > 0)
+                {
+                    // TODO: work out if it's worth adding in support for warning/info level diags here
+                    // for errors we store them as part of the import data and I am wondering if that is worth it for warnings
+                    var warningGroups = warnings.GroupBy(w => w.FileName);
+                    foreach (var warningGroup in warningGroups)
+                    {
+                        if (string.IsNullOrWhiteSpace(warningGroup.Key))
+                        {
+                            // ok so we have no file for some reason
+                            // so these are warnings currently not tied to a file
+                            // so we instead need to just log the warnings and move on
+                            foreach (var warning in warningGroup)
+                            {
+                                ctx.LogImportWarning(warning.Message);
+                            }
+                            continue;
+                        }
+
+                        // the compiler currently returns (unknown) for situations where an error is defined in a file that the compiler can't access
+                        // this is not ideal and something to fix, but for now we will handle it by reporting the issue in a different way
+                        if (warningGroup.Key == "(unknown)")
+                        {
+                            foreach (var warning in warningGroup)
+                            {
+                                ctx.LogImportWarning(warning.Message);
+                            }
+                            continue;
+                        }
+
+                        try
+                        {
+                            var relativePath = GetRelativePath(warningGroup.Key);
+
+                            var asset = AssetDatabase.LoadAssetAtPath<Object>(relativePath);
+
+                            foreach (var warning in warningGroup)
+                            {
+                                var relativeWarningFileName = GetRelativePath(warning.FileName);
+
+                                // some warnings don't seem to have line numbers?
+                                if (warning.Range.Start.Line == -1)
+                                {
+                                    ctx.LogImportWarning($"<a href=\"{relativeWarningFileName}\">{relativeWarningFileName}</a>: {warning.Message}", asset);
+                                }
+                                else
+                                {
+                                    ctx.LogImportWarning($"<a href=\"{relativeWarningFileName}\" line=\"{warning.Range.Start.Line + 1}\">{relativeWarningFileName}</a> {warning.Range.Start.Line + 1}: {warning.Message}", asset);
+                                }
+                            }
+
+                            var fileWithErrors = AssetDatabase.LoadAssetAtPath<TextAsset>(relativePath);
+                        }
+                        catch (System.Exception ex)
+                        {
+                            ctx.LogImportError($"Import failed with an unhandled exception: {ex.Message}");
+                        }
+                    }
+                }
+
                 importData.containsImplicitLineIDs = compilationResult.ContainsImplicitStringTags;
 
                 // Store _all_ declarations - both the ones in this .yarnproject
@@ -623,15 +629,20 @@ namespace Yarn.Unity.Editor
 
                 if (generateVariablesSourceFile)
                 {
-
-                    var fileName = variablesClassName + ".cs";
-
-                    var generatedSourcePath = Path.Combine(Path.GetDirectoryName(ctx.assetPath), fileName);
-                    bool generated = GenerateVariableSource(generatedSourcePath, project, compilationResult);
-                    if (generated)
+                    // Generate the variable source; if it's different to what's
+                    // on disk, import it.
+                    var assetPath = ctx.assetPath;
+                    EditorApplication.delayCall += () =>
                     {
-                        AssetDatabase.ImportAsset(generatedSourcePath);
-                    }
+                        var fileName = variablesClassName + ".cs";
+
+                        var generatedSourcePath = Path.Combine(Path.GetDirectoryName(assetPath), fileName);
+                        bool generated = GenerateVariableSource(generatedSourcePath, project, compilationResult);
+                        if (generated)
+                        {
+                            AssetDatabase.ImportAsset(generatedSourcePath);
+                        }
+                    };
                 }
             }
 
@@ -663,6 +674,17 @@ namespace Yarn.Unity.Editor
             StringBuilder sb = new StringBuilder();
             int indentLevel = 0;
             const int indentSize = 4;
+
+            void Open()
+            {
+                WriteLine("{");
+                indentLevel += 1;
+            }
+            void Close()
+            {
+                indentLevel -= 1;
+                WriteLine("}");
+            }
 
             void WriteLine(string line = "", int offset = 0)
             {
@@ -712,6 +734,8 @@ namespace Yarn.Unity.Editor
                 WriteLine($"/// </remarks>");
 
                 WriteGeneratedCodeAttribute();
+                var backingType = type.RawType == Types.String ? "String" : "Int";
+                WriteLine($"[Yarn.Unity.Attributes.YarnGeneratedEnum(Yarn.Shared.YarnEnum.BackingType.{backingType})]");
 
                 // Enums are always stored as integers; strings are represented
                 // as CRC32 hashes of the raw value
@@ -805,6 +829,110 @@ namespace Yarn.Unity.Editor
                 }
                 indentLevel -= 1;
                 WriteLine("}");
+            }
+
+            // generate out the specific enum converters
+            foreach (var enumType in enumTypes)
+            {
+                WriteGeneratedCodeAttribute();
+                WriteLine($"public static class {enumType.Name}EnumHelper");
+                Open();
+
+                // We generate a TryGet{Name}FromBacking that takes the enum's backing type, so that we can convert from the backing value to the enum case. Commands work with strings only, if the backing type is not a string, we'll also generate a method that accepts a string.
+
+                var backingType = enumType.RawType == Types.Number ? "int" : "string";
+                WriteLine($"public static bool TryGet{enumType.Name}FromBacking({backingType} backingInput, out {enumType.Name} {enumType.Name.ToLower()})");
+                Open();
+
+                WriteLine("switch (backingInput)");
+                Open();
+                foreach (var @case in enumType.EnumCases)
+                {
+                    if (enumType.RawType == Types.Number)
+                    {
+                        WriteLine($"case {@case.Value.Value}:");
+                    }
+                    else if (enumType.RawType == Types.String)
+                    {
+                        WriteLine($"case \"{@case.Value.Value}\":");
+                    }
+                    else
+                    {
+                        throw new System.ArgumentException($"Invalid Yarn enum raw type {enumType.RawType}");
+                    }
+                    indentLevel += 1;
+                    WriteLine($"{enumType.Name.ToLower()} = {enumType.Name}.{@case.Key};");
+                    WriteLine("return true;");
+                    indentLevel -= 1;
+
+                }
+                Close();
+
+                WriteLine();
+                WriteLine($"{enumType.Name.ToLower()} = default;");
+                WriteLine("return false;");
+
+                Close();
+
+                if (enumType.RawType != Types.String)
+                {
+                    WriteLine($"public static bool TryGet{enumType.Name}FromBacking(string backingInput, out {enumType.Name} {enumType.Name.ToLower()})");
+                    Open();
+
+                    WriteLine("switch (backingInput)");
+                    Open();
+                    foreach (var @case in enumType.EnumCases)
+                    {
+                        if (enumType.RawType == Types.Number)
+                        {
+                            WriteLine($"case \"{@case.Value.Value.ToString()}\":");
+                        }
+                        else
+                        {
+                            throw new System.ArgumentException($"Invalid Yarn enum raw type {enumType.RawType}");
+                        }
+                        indentLevel += 1;
+                        WriteLine($"{enumType.Name.ToLower()} = {enumType.Name}.{@case.Key};");
+                        WriteLine("return true;");
+                        indentLevel -= 1;
+
+                    }
+                    Close();
+
+                    WriteLine();
+                    WriteLine($"{enumType.Name.ToLower()} = default;");
+                    WriteLine("return false;");
+
+                    Close();
+                }
+
+                WriteLine($"public static bool TryGet{enumType.Name}ByName(string name, out {enumType.Name} {enumType.Name.ToLower()})");
+                Open();
+                WriteComment("because in yarn both EnumType.Value and .Value are valid forms of the enum we need to test if we are the short or full form first.");
+                WriteLine("if (name.StartsWith('.'))");
+                Open();
+                WriteLine($"name = $\"{enumType.Name}{{name}}\";");
+                Close();
+
+                WriteLine();
+                WriteLine("switch(name)");
+                Open();
+                foreach (var @case in enumType.EnumCases)
+                {
+                    WriteLine($"case \"{enumType.Name}.{@case.Key}\":");
+                    indentLevel += 1;
+                    WriteLine($"{enumType.Name.ToLower()} = {enumType.Name}.{@case.Key};");
+                    WriteLine("return true;");
+                    indentLevel -= 1;
+                }
+                Close();
+
+                WriteLine();
+                WriteLine($"{enumType.Name.ToLower()} = default;");
+                WriteLine("return false;");
+                Close();
+
+                Close();
             }
 
             WriteGeneratedCodeAttribute();
@@ -1112,15 +1240,37 @@ namespace Yarn.Unity.Editor
                     foreach (var (id, asset) in assetPaths)
                     {
                         newLocalization.AddLocalizedObjectToAsset(id, asset);
-#if USE_ADDRESSABLES
-                        if (newLocalization.UsesAddressableAssets)
-                        {
-                            // If we're using addressable assets, make sure that
-                            // the asset we just added has an address
-                            LocalizationEditor.EnsureAssetIsAddressable(asset, Localization.GetAddressForLine(id, localisationInfo.languageID));
-                        }
-#endif
                     }
+
+#if USE_ADDRESSABLES
+                    // If we're using addressable assets, make sure that the
+                    // assets we just added have an address. Do this after the
+                    // import completes, because we're not allowed to modify the
+                    // addressable asset settings in the middle of an import.
+                    if (newLocalization.UsesAddressableAssets)
+                    {
+                        EditorApplication.delayCall += () =>
+                        {
+                            var assetCount = assetPaths.Count();
+                            int count = 0;
+
+                            foreach (var (id, asset) in assetPaths)
+                            {
+                                // Updating asset addresses can take time, so
+                                // show a progress bar that the user can cancel.
+                                var cancelled = EditorUtility.DisplayCancelableProgressBar("Updating Dialogue Asset Addresses", asset.name, count / (float)assetCount);
+                                if (cancelled)
+                                {
+                                    Debug.LogWarning("Cancelled updating dialogue asset paths.");
+                                    break;
+                                }
+                                LocalizationEditor.EnsureAssetIsAddressable(asset, Localization.GetAddressForLine(id, localisationInfo.languageID));
+                                count += 1;
+                            }
+                            EditorUtility.ClearProgressBar();
+                        };
+                    }
+#endif
 
 #if YARNSPINNER_DEBUG
                     stopwatch.Stop();
@@ -1284,6 +1434,44 @@ namespace Yarn.Unity.Editor
                 }
             }
 
+            if (YarnSpinnerProjectSettings.GetOrCreateSettings().sortLocalisationValuesInsideStringTable)
+            {
+                // sorting the table based on file and line number
+                Dictionary<string, string> sortKeys = new();
+                foreach (var pair in stringTable)
+                {
+                    sortKeys[pair.Key] = $"{pair.Value.fileName.ToLower()}-{string.Format("{0:D6}", pair.Value.lineNumber)}";
+                }
+
+                HashSet<string> invalidKeys = new();
+                unityStringTable.SharedData.Entries.Sort((a, b) =>
+                {
+                    // if we encounter a key that doesn't match a value we got from the string table we want to log this and push it to one end
+                    if (sortKeys.TryGetValue(unityStringTable.GetEntry(a.Id).Key, out var aKey))
+                    {
+                        if (sortKeys.TryGetValue(unityStringTable.GetEntry(b.Id).Key, out var bKey))
+                        {
+                            return aKey.CompareTo(bKey);
+                        }
+                        else
+                        {
+                            invalidKeys.Add(unityStringTable.GetEntry(b.Id).Key);
+                            return 1;
+                        }
+                    }
+                    else
+                    {
+                        invalidKeys.Add(unityStringTable.GetEntry(a.Id).Key);
+                        return -1;
+                    }
+                });
+                // now that the table is sorted we want to log any invalid entries we might have found
+                foreach (var key in invalidKeys)
+                {
+                    Debug.LogWarning($"Encountered an ID in the Yarn string table \"{key}\" during import that didn't come from the Yarn Project.");
+                }
+            }
+
             // We've made changes to the table, so flag it and its shared data
             // as dirty.
             EditorUtility.SetDirty(unityStringTable);
@@ -1347,7 +1535,7 @@ namespace Yarn.Unity.Editor
                 return default;
             }
 
-            return CompilationJob.CreateFromFiles(project.SourceFiles);
+            return CompilationJob.CreateFromProject(project);
         }
 
         internal IEnumerable<string> GetErrorsForScript(TextAsset sourceScript)
@@ -1408,7 +1596,7 @@ namespace Yarn.Unity.Editor
         {
             CompilationJob compilationJob = GetCompilationJob();
 
-            if (compilationJob.Files.Any() == false)
+            if (compilationJob.Inputs.Any() == false)
             {
                 // We have no scripts to work with. In this case, return an
                 // empty collection - there's no error, but there's no content
@@ -1539,7 +1727,18 @@ namespace Yarn.Unity.Editor
             // Populate the string table collection from the Yarn strings
             AddStringTableEntries(table, tableCollection, ImportData.baseLanguageName);
         }
+
 #endif
+        internal void UpdateProjectFileVersion()
+        {
+            var project = GetProject()
+                ?? throw new System.InvalidOperationException($"Unable to open the project at {assetPath} for editing. Is it damaged?");
+            project.FileVersion = Project.CurrentProjectFileVersion;
+
+            project.SaveToFile(assetPath);
+
+            AssetDatabase.ImportAsset(assetPath);
+        }
 
         /// <summary>
         /// A placeholder string that may be used in Yarn Project files that

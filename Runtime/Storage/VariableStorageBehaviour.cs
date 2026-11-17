@@ -24,9 +24,11 @@ namespace Yarn.Unity
     /// cref="GameObject"/>s.
     /// </remarks>
     public abstract class VariableStorageBehaviour : MonoBehaviour, Yarn.IVariableStorage
-    {
+    {       
+        /// <inheritdoc/>
         public Program? Program { get; set; }
 
+        /// <inheritdoc/>
         public ISmartVariableEvaluator? SmartVariableEvaluator { get; set; }
 
         /// <inheritdoc/>
@@ -94,6 +96,7 @@ namespace Yarn.Unity
         /// </summary>
         public abstract (FloatDictionary FloatVariables, StringDictionary StringVariables, BoolDictionary BoolVariables) GetAllVariables();
 
+        /// <inheritdoc/>
         public VariableKind GetVariableKind(string name)
         {
             if (this.Contains(name))
@@ -113,7 +116,6 @@ namespace Yarn.Unity
 
         private struct ChangeListenerDisposable : IDisposable
         {
-
             private Delegate listener;
 
             private readonly List<Delegate> listeners;
@@ -173,19 +175,33 @@ namespace Yarn.Unity
 
             if (kind == VariableKind.Stored)
             {
-                var type = this.Program.InitialValues[variableName].ValueCase;
-
-                if (type == Operand.ValueOneofCase.BoolValue && typeof(T) != typeof(bool))
+                if (this.Program.InitialValues.TryGetValue(variableName, out var variable))
                 {
-                    throw new ArgumentException($"Can't add a {typeof(T)} change listener for {variableName}: must be a {typeof(bool)}");
+                    var type = variable.ValueCase;
+                
+                    if (type == Operand.ValueOneofCase.BoolValue && typeof(T) != typeof(bool))
+                    {
+                        throw new ArgumentException($"Can't add a {typeof(T)} change listener for {variableName}: must be a {typeof(bool)}");
+                    }
+                    if (type == Operand.ValueOneofCase.StringValue && typeof(T) != typeof(string))
+                    {
+                        throw new ArgumentException($"Can't add a {typeof(T)} change listener for {variableName}: must be a {typeof(string)}");
+                    }
+                    if (type == Operand.ValueOneofCase.FloatValue && typeof(float).IsAssignableFrom(typeof(T)) == false)
+                    {
+                        throw new ArgumentException($"Can't add a {typeof(T)} change listener for {variableName}: must be a number");
+                    }
                 }
-                if (type == Operand.ValueOneofCase.StringValue && typeof(T) != typeof(string))
+                else
                 {
-                    throw new ArgumentException($"Can't add a {typeof(T)} change listener for {variableName}: must be a {typeof(string)}");
-                }
-                if (type == Operand.ValueOneofCase.FloatValue && typeof(float).IsAssignableFrom(typeof(T)) == false)
-                {
-                    throw new ArgumentException($"Can't add a {typeof(T)} change listener for {variableName}: must be a number");
+                    // this means we are asking for a variable that is stored, but isn't one in the program
+                    // so basically fully unity created variable that was then injected into the varstore
+                    // not one defined in the yarn itself, which means in this abstract varstore layer we don't have a way to get it's type
+                    // so all we can do is see if it is convertible to T and if it is we let the change listener go ahead
+                    if (!this.TryGetValue<T>(variableName, out _))
+                    {
+                        throw new ArgumentException($"Can't add a {typeof(T)} change listener for {variableName}");
+                    }
                 }
             }
 

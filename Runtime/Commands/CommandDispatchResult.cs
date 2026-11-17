@@ -9,56 +9,79 @@ using System;
 namespace Yarn.Unity
 {
     /// <summary>
-    /// Represents the result of attempting to locate and call a command.
+    /// If an action fails in it's dispatch this captures the reason why
     /// </summary>
-    /// <seealso cref="DispatchCommandToGameObject(Command, Action)"/>
-    /// <seealso cref="DispatchCommandToRegisteredHandlers(Command, Action)"/>
-    internal struct CommandDispatchResult
+    internal enum StatusType
     {
+        /// <summary>
+        /// Was unable to find a valid target for the action.
+        /// </summary>
+        NoTargetFound,
 
-        internal enum ParameterParseStatusType
-        {
-            Succeeded,
-            InvalidParameterType,
-            InvalidParameterCount,
-        }
+        /// <summary>
+        /// The number of provided parameters does not match the expected number for this action
+        /// </summary>
+        InvalidParameterCount,
 
-        internal enum StatusType
-        {
+        /// <summary>
+        /// The parameter is not of the expected type
+        /// </summary>
+        InvalidParameter,
 
-            Succeeded,
+        /// <summary>
+        /// The action could not be found.
+        /// </summary>
+        ActionUnknown,
 
-            NoTargetFound,
+        /// <summary>
+        /// The return is not of the expected type
+        /// </summary>
+        InvalidReturn,
+    }
 
-            TargetMissingComponent,
+    /// <summary>
+    /// Represents any number of different results that could have happened while dispatching an action.
+    /// </summary>
+    /// <remarks>
+    /// This includes all success conditions as well as failure conditions.
+    /// </remarks>
+    internal interface IDispatchResult { }
 
-            InvalidParameterCount,
-
-            InvalidParameter,
-
-            /// <summary>
-            /// The command could not be found.
-            /// </summary>
-            CommandUnknown,
-        };
-
+    internal struct ActionDispatchFailed: IDispatchResult
+    {
         internal StatusType Status;
 
-        internal string? Message;
-
+        internal ActionDispatchFailed(StatusType status)
+        {
+            Status = status;
+        }
+    }
+    internal struct CommandDispatchSucceededSynchronously: IDispatchResult { }
+    internal struct CommandDispatchSucceededAsynchronously: IDispatchResult
+    {
         internal YarnTask Task;
 
-        public CommandDispatchResult(StatusType status)
+        internal CommandDispatchSucceededAsynchronously(YarnTask task)
         {
-            Status = status;
-            Task = YarnTask.CompletedTask;
-            Message = null;
-        }
-        public CommandDispatchResult(StatusType status, YarnTask task)
-        {
-            Status = status;
             Task = task;
-            Message = null;
+        }
+    }
+    internal struct FunctionDispatchSucceededAsynchronously<T>: IDispatchResult
+    {
+        internal YarnTask<T> Task;
+
+        internal FunctionDispatchSucceededAsynchronously(YarnTask<T> task)
+        {
+            Task = task;
+        }
+    }
+    internal struct FunctionDispatchSucceededSynchronously: IDispatchResult
+    {
+        internal IConvertible Result;
+
+        internal FunctionDispatchSucceededSynchronously(IConvertible result)
+        {
+            Result = result;
         }
     }
 }

@@ -18,10 +18,12 @@ namespace Yarn.Unity
     public interface IActionRegistration
     {
         /// <summary>
-        /// Adds a command handler. Dialogue will pause execution after the
-        /// command is called.
+        /// Adds a command handler and registers the command with Yarn as one that can be called.
         /// </summary>
         /// <remarks>
+        /// <para>
+        /// You can also register commands via the <see cref="Yarn.Unity.YarnCommandAttribute"/> attribute on your methods.
+        /// </para>
         /// <para>When this command handler has been added, it can be called
         /// from your Yarn scripts like so:</para>
         ///
@@ -29,19 +31,13 @@ namespace Yarn.Unity
         /// &lt;&lt;commandName param1 param2&gt;&gt;
         /// </code>
         ///
-        /// <para>If <paramref name="handler"/> is a method that returns a <see
-        /// cref="Coroutine"/>, when the command is run, the <see
-        /// cref="DialogueRunner"/> will wait for the returned coroutine to stop
-        /// before delivering any more content.</para>
-        /// <para>If <paramref name="handler"/> is a method that returns an <see
-        /// cref="IEnumerator"/>, when the command is run, the <see
-        /// cref="DialogueRunner"/> will start a coroutine using that method and
-        /// wait for that coroutine to stop before delivering any more content.
+        /// <para>If <paramref name="handler"/> is a method that returns a <see cref="YarnTask"/>, <see cref="Task"/>, <see cref="Awaitable"/>, or <see cref="UniTask"/> when the command is run, the <see cref="DialogueRunner"/> will wait for the task to finish before delivering any more content.</para>
+        /// <para>If <paramref name="handler"/> is a method that returns a <see cref="Coroutine"/>, when the command is run, the <see cref="DialogueRunner"/> will wait for the returned coroutine to stop before delivering any more content.</para>
+        /// <para>If <paramref name="handler"/> is a method that returns an <see cref="IEnumerator"/>, when the command is run, the <see cref="DialogueRunner"/> will start a coroutine using that method and wait for that coroutine to stop before delivering any more content.
         /// </para>
         /// </remarks>
         /// <param name="commandName">The name of the command.</param>
-        /// <param name="handler">The <see cref="CommandHandler"/> that will be
-        /// invoked when the command is called.</param>
+        /// <param name="handler">The <see cref="CommandHandler"/> that will be invoked when the command is called.</param>
         void AddCommandHandler(string commandName, Delegate handler);
 
         /// <inheritdoc cref="AddCommandHandler(string, Delegate)"/>
@@ -52,15 +48,20 @@ namespace Yarn.Unity
 
         /// <summary>
         /// Removes a command handler.
+        /// This does not impact the compiled Yarn program, only the runtime actions.
+        /// The Yarn VM will still attempt to call the command when it encounters it, likely results in an exception being thrown.
+        /// In general you should only remove commands if you know they won't be needed.
         /// </summary>
         /// <param name="commandName">The name of the command to remove.</param>
         void RemoveCommandHandler(string commandName);
 
         /// <summary>
-        /// Add a new function that returns a value, so that it can be called
-        /// from Yarn scripts.
+        /// Add a new function that returns a value, so that it can be called from Yarn scripts.
         /// </summary>
         /// <remarks>
+        /// <para>
+        /// You can also register functions via the <see cref="Yarn.Unity.YarnFunctionAttribute"/> attribute on your methods.
+        /// </para>
         /// <para>When this function has been registered, it can be called from
         /// your Yarn scripts like so:</para>
         ///
@@ -68,12 +69,6 @@ namespace Yarn.Unity
         /// &lt;&lt;if myFunction(1, 2) == true&gt;&gt;
         ///     myFunction returned true!
         /// &lt;&lt;endif&gt;&gt;
-        /// </code>
-        ///
-        /// <para>The <c>call</c> command can also be used to invoke the function:</para>
-        ///
-        /// <code lang="yarn">
-        /// &lt;&lt;call myFunction(1, 2)&gt;&gt;
         /// </code>
         /// </remarks>
         /// <param name="name">The name of the function to add.</param>
@@ -86,20 +81,18 @@ namespace Yarn.Unity
         /// Remove a registered function.
         /// </summary>
         /// <remarks>
-        /// After a function has been removed, it cannot be called from
-        /// Yarn scripts.
+        /// <para>
+        /// After a function has been removed, it cannot be called from Yarn scripts.
+        /// </para>
+        /// <para>
+        /// This does not impact the compiled Yarn program, only the runtime actions.
+        /// The Yarn VM will still attempt to call the function when it encounters it, likely resulting in an exception being thrown.
+        /// In general you should only remove functions if you know they won't be needed.
+        /// </para>
         /// </remarks>
         /// <param name="name">The name of the function to remove.</param>
         /// <seealso cref="AddFunction(string, Delegate)"/>
         void RemoveFunction(string name);
-
-        /// <summary>
-        /// Registers a function as existing, without supplying an implementation.
-        /// </summary>
-        /// <param name="name">The name of the function.</param>
-        /// <param name="returnType">The return type of the function.</param>
-        /// <param name="parameterTypes">The types of the function's parameters.</param>
-        void RegisterFunctionDeclaration(string name, Type returnType, Type[] parameterTypes);
     }
 
     /// <summary>
@@ -108,12 +101,9 @@ namespace Yarn.Unity
     /// </summary>
     public static class ActionRegistrationExtension
     {
-
-
+        // These registrations for System.Action were generated by action-gyb.py
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler(this IActionRegistration registration, string commandName, System.Action handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
-
-        // GYB11 START
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler<T1>(this IActionRegistration registration, string commandName, System.Action<T1> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
@@ -134,8 +124,22 @@ namespace Yarn.Unity
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
-        // GYB11 END
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(this IActionRegistration registration, string commandName, System.Action<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
 
+        // These registrations for System.Threading.Tasks.Task were generated by action-gyb.py
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler(this IActionRegistration registration, string commandName, System.Func<System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler<T1>(this IActionRegistration registration, string commandName, System.Func<T1, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
@@ -156,7 +160,20 @@ namespace Yarn.Unity
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, System.Threading.Tasks.Task> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
 
+        // These registrations for YarnTask were generated by action-gyb.py
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler(this IActionRegistration registration, string commandName, System.Func<YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
@@ -179,8 +196,20 @@ namespace Yarn.Unity
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
-        // GYB11 END
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, YarnTask> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
 
+        // These registrations for IEnumerator were generated by action-gyb.py
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler(this IActionRegistration registration, string commandName, System.Func<IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
@@ -203,9 +232,20 @@ namespace Yarn.Unity
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
-        // GYB11 END
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, IEnumerator> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
 
-
+        // These registrations for Coroutine were generated by action-gyb.py
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler(this IActionRegistration registration, string commandName, System.Func<Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
@@ -228,7 +268,18 @@ namespace Yarn.Unity
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
         /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
         public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
-        // GYB11 END
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
+        /// <inheritdoc cref="IActionRegistration.AddCommandHandler(string, Delegate)"/>
+        public static void AddCommandHandler<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16>(this IActionRegistration registration, string commandName, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, Coroutine> handler) => registration.AddCommandHandler(commandName, (Delegate)handler);
 
 
         /// <inheritdoc cref="IActionRegistration.AddFunction(string, Delegate)"/>
@@ -264,6 +315,5 @@ namespace Yarn.Unity
 
         /// <inheritdoc cref="AddFunction{TResult}(IActionRegistration, string, Func{TResult})"/>
         public static void AddFunction<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult>(this IActionRegistration registration, string name, System.Func<T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, TResult> implementation) => registration.AddFunction(name, (Delegate)implementation);
-
     }
 }

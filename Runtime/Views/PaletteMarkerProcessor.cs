@@ -2,13 +2,11 @@
 Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
-using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using Yarn.Markup;
 using Yarn.Unity;
-using YarnSpinner.YarnSpinner.Markup;
 
 #nullable enable
 
@@ -20,8 +18,8 @@ using YarnSpinner.YarnSpinner.Markup;
 /// whose name is equal to the name of a style in the given palette. For
 /// example, if the palette defines a style named "happy", this marker processor
 /// will process tags in a Yarn line named <c>[happy]</c> by inserting the
-/// appropriate TextMeshProp style tags defined for the "happy" style.</remarks>
-public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
+/// appropriate TextMeshPro style tags defined for the "happy" style.</remarks>
+public sealed class PaletteMarkerProcessor : ReplacementMarkupHandler
 {
     /// <summary>
     /// The <see cref="MarkupPalette"/> to use when applying styles.
@@ -31,8 +29,9 @@ public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
 
     /// <summary>
     /// The line provider to register this markup processor with.
+    /// If empty, the line provider of the dialogue runner is used.
     /// </summary>
-    [Tooltip("The LineProviderBehaviour to register this markup processor with.")]
+    [Tooltip("The LineProviderBehaviour to register this markup processor with. If empty, the dialogue runner's one.")]
     public LineProviderBehaviour? lineProvider;
 
     /// <inheritdoc/>
@@ -46,23 +45,21 @@ public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
     /// apply, but this is ignored for TextMeshPro styles.</param>
     /// <param name="localeCode">The locale code to use when formatting the style.</param>
     /// <returns>A list of markup diagnostics if there are any errors, otherwise an empty list.</returns>
-    public override List<LineParser.MarkupDiagnostic> ProcessReplacementMarker(MarkupAttribute marker, StringBuilder childBuilder, List<MarkupAttribute> childAttributes, SharedMarkupsMeta sharedMarkupsMeta, string localeCode)
+    public override ReplacementMarkerResult ProcessReplacementMarker(MarkupAttribute marker, StringBuilder childBuilder, List<MarkupAttribute> childAttributes, string localeCode)
     {
-
         if (palette == null)
         {
-            return new List<LineParser.MarkupDiagnostic>() {
-                new LineParser.MarkupDiagnostic($"can't apply palette for marker {marker.Name}, because palette was not set")
+            var error = new List<LineParser.MarkupDiagnostic>() {
+                new LineParser.MarkupDiagnostic($"can't apply palette for marker {marker.Name}, because a palette was not set")
             };
+            return new ReplacementMarkerResult(error, 0);
         }
 
         if (palette.PaletteForMarker(marker.Name, out var format))
         {
-
+            var childrenLength = childBuilder.Length;
             childBuilder.Insert(0, format.Start);
             childBuilder.Append(format.End);
-
-            BuildCorrectionMetaForMarkup(marker, sharedMarkupsMeta, format.Start.Length + format.End.Length);
 
             // finally we need to know if we have to offset the markers
             // most of the time we won't have to do anything
@@ -78,36 +75,46 @@ public sealed class PaletteMarkerProcessor : Yarn.Unity.ReplacementMarkupHandler
                 }
             }
 
-            return ReplacementMarkupHandler.NoDiagnostics;
+            // finally we need to calculate the number of invisible characters we added
+            // which is the difference between the new and original string lengths - the total number of visible characters inserted
+            // we don't care WHERE those visible characters were added, just that they were
+            // we can't just use the marker offset because that only worries about visible elements added at the front of the string
+            // most of the time this is just gonna be 0 anyways and you don't have to think about it
+            return new ReplacementMarkerResult(childBuilder.Length - childrenLength - format.TotalVisibleCharacterCount);
         }
 
-        var diagnostic = new LineParser.MarkupDiagnostic($"was unable to find a matching sprite for {marker.Name}");
-        return new List<LineParser.MarkupDiagnostic>() { diagnostic };
+        var diagnostics = new List<LineParser.MarkupDiagnostic>() { new LineParser.MarkupDiagnostic($"was unable to find a matching sprite for {marker.Name}") };
+        return new ReplacementMarkerResult(diagnostics, 0);
     }
 
-    /// <summary>
-    /// Called by Unity when this script is enabled to register itself with <see
-    /// cref="lineProvider"/>.
-    /// </summary>
-    private void Start()
+    public override void RegisterMarker()
     {
         if (palette == null)
         {
             return;
         }
 
-        if (lineProvider == null)
+        if (palette.BasicMarkers.Count == 0)
         {
-            lineProvider = (LineProviderBehaviour)GameObject.FindAnyObjectByType<DialogueRunner>().LineProvider;
+            return;
+        }
+
+        var provider = FindLineProvider(lineProvider);
+        if (provider == null)
+        {
+            Debug.LogWarning("Was unable to find a line provider, unable to register the markup palettes.");
+            return;
         }
 
         foreach (var marker in palette.BasicMarkers)
         {
-            lineProvider.RegisterMarkerProcessor(marker.Marker, this);
+            provider.DeregisterMarkerProcessor(marker.Marker);
+            provider.RegisterMarkerProcessor(marker.Marker, this);
         }
         foreach (var marker in palette.CustomMarkers)
         {
-            lineProvider.RegisterMarkerProcessor(marker.Marker, this);
+            provider.DeregisterMarkerProcessor(marker.Marker);
+            provider.RegisterMarkerProcessor(marker.Marker, this);
         }
     }
 }

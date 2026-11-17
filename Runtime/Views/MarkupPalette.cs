@@ -2,10 +2,8 @@
 Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using Yarn.Unity.Attributes;
 
 namespace Yarn.Unity
 {
@@ -40,7 +38,6 @@ namespace Yarn.Unity
             /// <summary>
             /// The color to use for text associated with this marker.
             /// </summary>
-            [ShowIf(nameof(CustomColor))]
             public Color Color;
 
             /// <summary>
@@ -68,6 +65,9 @@ namespace Yarn.Unity
             public bool Strikedthrough;
         }
 
+        /// <summary>
+        /// Represents a marker itself including it's offsets (if needed)
+        /// </summary>
         [System.Serializable]
         public struct CustomMarker
         {
@@ -75,6 +75,7 @@ namespace Yarn.Unity
             public string Start;
             public string End;
             public int MarkerOffset;
+            public int TotalVisibleCharacterCount;
         }
 
         /// <summary>
@@ -108,6 +109,12 @@ namespace Yarn.Unity
             return false;
         }
 
+        /// <summary>
+        /// Returns the named palette
+        /// </summary>
+        /// <param name="markerName">The name of the requested palette</param>
+        /// <param name="palette">The out var of where the found palette will be stored</param>
+        /// <returns>True if the palette was found, false otherwise</returns>
         public bool PaletteForMarker(string markerName, out CustomMarker palette)
         {
             // we first check if we have a marker of that name in the basic markers
@@ -156,6 +163,7 @@ namespace Yarn.Unity
                         Start = front.ToString(),
                         End = back.ToString(),
                         MarkerOffset = 0,
+                        TotalVisibleCharacterCount = 0,
                     };
                     return true;
                 }

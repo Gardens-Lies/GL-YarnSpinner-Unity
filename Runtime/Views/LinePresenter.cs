@@ -5,7 +5,6 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 using System.Collections.Generic;
 using System.Threading;
 using UnityEngine;
-using UnityEngine.UI;
 using Yarn.Markup;
 using Yarn.Unity.Attributes;
 
@@ -15,17 +14,22 @@ using Yarn.Unity.Attributes;
 using TMPro;
 #else
 using TextMeshProUGUI = Yarn.Unity.TMPShim;
+using TMP_Text = Yarn.Unity.TMPShim;
 #endif
 
 namespace Yarn.Unity
 {
     /// <summary>
-    /// A Dialogue Presenter that presents lines of dialogue, using Unity UI
-    /// elements.
+    /// A Dialogue Presenter that presents lines of dialogue, using Unity UI elements.
     /// </summary>
-    [HelpURL("https://docs.yarnspinner.dev/using-yarnspinner-with-unity/components/dialogue-view/line-view")]
+    [HelpURL("https://docs.yarnspinner.dev/yarn-spinner-for-godot/godot-csharp/components/dialogue-presenters/line-presenter")]
     public sealed class LinePresenter : DialoguePresenterBase
     {
+        internal enum TypewriterType
+        {
+            Instant, ByLetter, ByWord, Custom,
+        }
+
         /// <summary>
         /// The canvas group that contains the UI elements used by this Line
         /// View.
@@ -61,22 +65,20 @@ namespace Yarn.Unity
         /// not be shown in the <see cref="lineText"/> object.</para>
         /// </remarks>
         [Group("Character")]
-        [Label("Shows Name")]
-        public bool showCharacterNameInLineView = true;
+        [Label("Shows Name In Line")]
+        public bool showCharacterNameInLine = true;
 
         /// <summary>
         /// The <see cref="TMP_Text"/> object that displays the character
         /// names found in dialogue lines.
         /// </summary>
         /// <remarks>
-        /// If the <see cref="LineView"/> receives a line that does not contain
+        /// If the <see cref="LinePresenter"/> receives a line that does not contain
         /// a character name, this object will be left blank.
         /// </remarks>
         [Group("Character")]
-        [ShowIf(nameof(showCharacterNameInLineView))]
-        [Label("Name field")]
-        [MustNotBeNullWhen(nameof(showCharacterNameInLineView), "A text field must be provided when Shows Name is set")]
-        public TMP_Text? characterNameText;
+        [Label("Name Field")]
+        public TMP_Text? characterNameText = null;
 
         /// <summary>
         /// The game object that holds the <see cref="characterNameText"/> text
@@ -88,7 +90,6 @@ namespace Yarn.Unity
         /// just be the same game object as <see cref="characterNameText"/>.
         /// </remarks>
         [Group("Character")]
-        [ShowIf(nameof(showCharacterNameInLineView))]
         public GameObject? characterNameContainer = null;
 
 
@@ -112,6 +113,16 @@ namespace Yarn.Unity
         public bool useFadeEffect = true;
 
         /// <summary>
+        /// Shows and hides the UI for each line.
+        /// </summary>
+        /// <remarks>If <see langword="false"/>, the UI stays visible between lines:
+        /// it's only hidden before options and at the end of dialogue.
+        /// Without <see cref="useFadeEffect"/>, the UI is shown and hidden immediately.</remarks>
+        /// <seealso cref="useFadeEffect"/>
+        [Group("Fade")]
+        public bool fadeAtEachDialogue = true;
+
+        /// <summary>
         /// The time that the fade effect will take to fade lines in.
         /// </summary>
         /// <remarks>This value is only used when <see cref="useFadeEffect"/> is
@@ -130,7 +141,6 @@ namespace Yarn.Unity
         [Group("Fade")]
         [ShowIf(nameof(useFadeEffect))]
         public float fadeDownDuration = 0.1f;
-
 
         /// <summary>
         /// Controls whether this Line View will automatically to the Dialogue
@@ -163,67 +173,73 @@ namespace Yarn.Unity
         /// <see langword="true"/>.</remarks>
         [Group("Automatically Advance Dialogue")]
         [ShowIf(nameof(autoAdvance))]
-        [Label("Delay before advancing")]
+        [Label("Delay Before Advancing")]
         public float autoAdvanceDelay = 1f;
 
 
         // typewriter fields
 
-        /// <summary>
-        /// Controls whether the text of <see cref="lineText"/> should be
-        /// gradually revealed over time.
-        /// </summary>
-        /// <remarks><para>If this value is <see langword="true"/>, the <see
-        /// cref="lineText"/> object's <see
-        /// cref="TMP_Text.maxVisibleCharacters"/> property will animate from 0
-        /// to the length of the text, at a rate of <see
-        /// cref="typewriterEffectSpeed"/> letters per second when the line
-        /// appears. <see cref="onCharacterTyped"/> is called for every new
-        /// character that is revealed.</para>
-        /// <para>If this value is <see langword="false"/>, the <see
-        /// cref="lineText"/> will all be revealed at the same time.</para>
-        /// <para style="note">If <see cref="useFadeEffect"/> is <see
-        /// langword="true"/>, the typewriter effect will run after the fade-in
-        /// is complete.</para>
-        /// </remarks>
-        /// <seealso cref="lineText"/>
-        /// <seealso cref="onCharacterTyped"/>
-        /// <seealso cref="typewriterEffectSpeed"/>
         [Group("Typewriter")]
-        public bool useTypewriterEffect = true;
+        [SerializeField] internal TypewriterType typewriterStyle = TypewriterType.ByLetter;
 
         /// <summary>
         /// The number of characters per second that should appear during a
         /// typewriter effect.
         /// </summary>
         [Group("Typewriter")]
-        [ShowIf(nameof(useTypewriterEffect))]
-        [Label("Letters per second")]
+        [ShowIf(nameof(typewriterStyle), TypewriterType.ByLetter)]
+        [Label("Letters per Second")]
         [Min(0)]
-        public int typewriterEffectSpeed = 60;
+        public int lettersPerSecond = 60;
+
+        [Group("Typewriter")]
+        [ShowIf(nameof(typewriterStyle), TypewriterType.ByWord)]
+        [Label("Words per Second")]
+        [Min(0)]
+        public int wordsPerSecond = 10;
+
+        /// <summary>
+        /// Provides a mechanism to connect a typewriter up to this presenter.
+        /// </summary>
+        /// <remarks>
+        /// This uses the <see cref="InterfaceContainer"/> class to provide a wrapper around an interface, otherwise all typewriters would need to be  monobehaviours
+        /// </remarks>
+        [Group("Typewriter")]
+        [ShowIf(nameof(typewriterStyle), TypewriterType.Custom)]
+        [UnityEngine.Serialization.FormerlySerializedAs("CustomTypewriter")]
+        public InterfaceContainer<IAsyncTypewriter>? customTypewriter;
 
         /// <summary>
         /// A list of <see cref="ActionMarkupHandler"/> objects that will be
         /// used to handle markers in the line.
         /// </summary>
         [Group("Typewriter")]
-        [ShowIf(nameof(useTypewriterEffect))]
-        [Label("Event Handler")]
+        [Label("Event Handlers")]
         [UnityEngine.Serialization.FormerlySerializedAs("actionMarkupHandlers")]
         [SerializeField] List<ActionMarkupHandler> eventHandlers = new List<ActionMarkupHandler>();
-
-        /// <inheritdoc/>
-        public override YarnTask OnDialogueCompleteAsync()
+        private List<IActionMarkupHandler> ActionMarkupHandlers
         {
-            if (canvasGroup != null)
+            get
             {
-                canvasGroup.alpha = 0;
+                var pauser = new PauseEventProcessor();
+                List<IActionMarkupHandler> ActionMarkupHandlers = new()
+                {
+                    pauser,
+                };
+                ActionMarkupHandlers.AddRange(eventHandlers);
+                return ActionMarkupHandlers;
             }
-            return YarnTask.CompletedTask;
         }
 
         /// <inheritdoc/>
-        public override YarnTask OnDialogueStartedAsync()
+        public override YarnTask OnDialogueCompleteAsync(CancellationToken token)
+        {
+            var fadeToken = new LineCancellationToken { NextContentToken = token, HurryUpToken = token };
+            return FadeUITo(0.0f, fadeDownDuration, fadeToken);
+        }
+
+        /// <inheritdoc/>
+        public override YarnTask OnDialogueStartedAsync(CancellationToken token)
         {
             if (canvasGroup != null)
             {
@@ -237,25 +253,83 @@ namespace Yarn.Unity
         /// </summary>
         private void Awake()
         {
-            if (useTypewriterEffect)
-            {
-                // need to add a pause handler also
-                // and add it to the front of the list
-                // that way it always happens first
-                var pauser = new PauseEventProcessor();
-                ActionMarkupHandlers.Insert(0, pauser);
-            }
-
             if (characterNameContainer == null && characterNameText != null)
             {
                 characterNameContainer = characterNameText.gameObject;
             }
+
+            switch (typewriterStyle)
+            {
+                case TypewriterType.Instant:
+                    Typewriter = new InstantTypewriter()
+                    {
+                        ActionMarkupHandlers = ActionMarkupHandlers,
+                        TextElement = this.lineText,
+                    };
+                    break;
+
+                case TypewriterType.ByLetter:
+                    Typewriter = new LetterTypewriter()
+                    {
+                        ActionMarkupHandlers = ActionMarkupHandlers,
+                        TextElement = this.lineText,
+                        CharactersPerSecond = this.lettersPerSecond,
+                    };
+                    break;
+
+                case TypewriterType.ByWord:
+                    Typewriter = new WordTypewriter()
+                    {
+                        ActionMarkupHandlers = ActionMarkupHandlers,
+                        TextElement = this.lineText,
+                        WordsPerSecond = this.wordsPerSecond,
+                    };
+                    break;
+
+                case TypewriterType.Custom:
+                    Typewriter = customTypewriter?.Interface;
+                    if (Typewriter == null)
+                    {
+                        Debug.LogWarning("Typewriter mode is set to custom but there is no typewriter set.");
+                    }
+                    else
+                    {    
+                        Typewriter.ActionMarkupHandlers.AddRange(ActionMarkupHandlers);
+                        Typewriter.TextElement = this.lineText;
+                    }
+                    break;
+            }
         }
 
-        private void Start()
+        /// <summary>
+        /// Fades the UI from <paramref name="alphaIn"/> to <paramref name="alphaOut"/>,
+        /// or sets it to <paramref name="alphaOut"/> immediately without <see cref="useFadeEffect"/>.
+        /// </summary>
+        /// <param name="alphaIn">The alpha at the start of the fade.</param>
+        /// <param name="alphaOut">The alpha at the end of the fade.</param>
+        /// <param name="duration">How long the fade lasts, in seconds.</param>
+        /// <param name="token">The fade ends immediately when its hurry up token is cancelled.</param>
+        public async YarnTask FadeUI(float alphaIn, float alphaOut, float duration, LineCancellationToken token)
         {
-            // we add all the monobehaviour handlers into the shared list
-            ActionMarkupHandlers.AddRange(eventHandlers);
+            if (canvasGroup != null)
+            {
+                await Effects.FadeOrSetAlphaAsync(canvasGroup, useFadeEffect, alphaIn, alphaOut,
+                    duration, token.HurryUpToken);
+            }
+        }
+
+        /// <summary>
+        /// Fades the UI from its current alpha to <paramref name="alphaOut"/>.
+        /// A partial fade is shorter: <paramref name="duration"/> is the time of a full fade.
+        /// </summary>
+        private YarnTask FadeUITo(float alphaOut, float duration, LineCancellationToken token)
+        {
+            if (canvasGroup == null)
+            {
+                return YarnTask.CompletedTask;
+            }
+            float alphaIn = canvasGroup.alpha;
+            return FadeUI(alphaIn, alphaOut, duration * Mathf.Abs(alphaOut - alphaIn), token);
         }
 
         /// <summary>Presents a line using the configured text view.</summary>
@@ -272,115 +346,83 @@ namespace Yarn.Unity
             MarkupParseResult text;
 
             // configuring the text fields
-            if (showCharacterNameInLineView)
+            if (characterNameText == null)
             {
-                if (characterNameText == null)
+                if (showCharacterNameInLine)
                 {
-                    Debug.LogWarning($"{nameof(LinePresenter)} is configured to show character names, but no character name text view was provided.", this);
+                    text = line.Text;
                 }
                 else
                 {
-                    characterNameText.text = line.CharacterName;
-                }
-                text = line.TextWithoutCharacterName;
-
-                if (line.Text.TryGetAttributeWithName("character", out var characterAttribute))
-                {
-                    text.Attributes.Add(characterAttribute);
+                    text = line.TextWithoutCharacterName;
                 }
             }
             else
             {
-                // we don't want to show character names but do have a valid container for showing them
-                // so we should just disable that and continue as if it didn't exist
+                text = line.TextWithoutCharacterName;
+
+                // we are configured to show character names in their own little box, but this line doesn't have one
                 if (characterNameContainer != null)
                 {
-                    characterNameContainer.SetActive(false);
-                }
-                text = line.TextWithoutCharacterName;
-            }
-            lineText.text = text.Text;
-
-            // the typewriter requires all characters to be hidden at the start so they can be shown one at a time
-            if (useTypewriterEffect)
-            {
-                lineText.maxVisibleCharacters = 0;
-                // letting every temporal processor know that fade up (if set) is about to begin
-                foreach (var processor in ActionMarkupHandlers)
-                {
-                    processor.OnPrepareForLine(text, lineText);
-                }
-            }
-            else
-            {
-                lineText.maxVisibleCharacters = text.Text.Length;
-            }
-
-            if (canvasGroup != null)
-            {
-                // fading up the UI
-                if (useFadeEffect)
-                {
-                    await Effects.FadeAlphaAsync(canvasGroup, 0, 1, fadeDownDuration, token.HurryUpToken);
-                }
-                else
-                {
-                    // We're not fading up, so set the canvas group's alpha to 1 immediately.
-                    canvasGroup.alpha = 1;
+                    if (string.IsNullOrWhiteSpace(line.CharacterName))
+                    {
+                        characterNameContainer.SetActive(false);
+                    }
+                    else
+                    {
+                        characterNameContainer.SetActive(true);
+                        characterNameText.text = line.CharacterName;
+                    }
                 }
             }
 
-            if (useTypewriterEffect)
+            Typewriter ??= new InstantTypewriter()
             {
-                var typewriter = new BasicTypewriter()
-                {
-                    ActionMarkupHandlers = this.ActionMarkupHandlers,
-                    Text = this.lineText,
-                    CharactersPerSecond = this.typewriterEffectSpeed,
-                };
+                ActionMarkupHandlers = this.ActionMarkupHandlers,
+                TextElement = this.lineText,
+            };
 
-                await typewriter.RunTypewriter(text, token.HurryUpToken);
-            }
+            Typewriter.PrepareForContent(text);
+
+            // fading up the UI (if it's already visible, nothing happens)
+            await FadeUITo(1.0f, fadeUpDuration, token);
+
+            await Typewriter.RunTypewriter(text, token.HurryUpToken).SuppressCancellationThrow();
 
             // if we are set to autoadvance how long do we hold for before continuing?
             if (autoAdvance)
             {
-                await YarnTask.Delay((int)(autoAdvanceDelay * 1000), token.NextLineToken).SuppressCancellationThrow();
+                await YarnTask.Delay((int)(autoAdvanceDelay * 1000), token.NextContentToken).SuppressCancellationThrow();
             }
             else
             {
-                await YarnTask.WaitUntilCanceled(token.NextLineToken).SuppressCancellationThrow();
+                await YarnTask.WaitUntilCanceled(token.NextContentToken).SuppressCancellationThrow();
             }
 
-            // we tell all action processors that the line is finished and is about to go away
-            foreach (var processor in ActionMarkupHandlers)
-            {
-                processor.OnLineWillDismiss();
-            }
+            Typewriter.ContentWillDismiss();
 
-            if (canvasGroup != null)
+            if (fadeAtEachDialogue)
             {
                 // we fade down the UI
-                if (useFadeEffect)
-                {
-                    await Effects.FadeAlphaAsync(canvasGroup, 1, 0, fadeDownDuration, token.HurryUpToken).SuppressCancellationThrow();
-                }
-                else
-                {
-                    canvasGroup.alpha = 0;
-                }
+                await FadeUITo(0.0f, fadeDownDuration, token);
             }
+
+            Typewriter.ContentDidDismiss();
         }
 
-        /// <inheritdoc cref="DialoguePresenterBase.RunOptionsAsync(DialogueOption[], CancellationToken)" path="/summary"/> 
-        /// <inheritdoc cref="DialoguePresenterBase.RunOptionsAsync(DialogueOption[], CancellationToken)" path="/param"/> 
-        /// <inheritdoc cref="DialoguePresenterBase.RunOptionsAsync(DialogueOption[], CancellationToken)" path="/returns"/> 
-        /// <remarks>
-        /// This dialogue presenter does not handle any options.
-        /// </remarks>
-        public override YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] dialogueOptions, CancellationToken cancellationToken)
+        // Le Dialogue Runner appelle RunOptionsAsync sur TOUS les Dialogue
+        // Presenters de la liste, pas seulement sur celui qui affiche les
+        // choix (voir la doc officielle : un presenter qui ne gère pas les
+        // options doit juste retourner null). On profite de ce hook pour
+        // faire disparaître le canvas de ligne juste avant que les options
+        // ne s'affichent. La ligne suivante le réaffiche (RunLineAsync
+        // part de l'alpha actuel).
+        public override async YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] options, LineCancellationToken token)
         {
-            return YarnTask<DialogueOption?>.FromResult(null);
+            await FadeUITo(0.0f, fadeDownDuration, token);
+
+            // Ce presenter n'affiche pas les options lui-même.
+            return null;
         }
     }
 }
