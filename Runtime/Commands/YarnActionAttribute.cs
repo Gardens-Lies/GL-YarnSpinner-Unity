@@ -11,7 +11,11 @@ using UnityEngine;
 
 namespace Yarn.Unity
 {
-    [AttributeUsage(AttributeTargets.Method, Inherited = false)]
+    /// <summary>
+    /// Abstract basetype of the action based attributes.
+    /// Used during action collection and analysis
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method, Inherited = false, AllowMultiple = false)]
     public abstract class YarnActionAttribute : Attribute
     {
         /// <summary>

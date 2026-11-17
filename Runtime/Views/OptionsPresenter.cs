@@ -64,14 +64,23 @@ namespace Yarn.Unity
         [Space]
         public bool showUnavailableOptions = false;
 
+        /// <summary>
+        /// Should the UI fade to show and hide the options?
+        /// </summary>
         [Group("Fade")]
         [Label("Fade UI")]
         public bool useFadeEffect = true;
 
+        /// <summary>
+        /// How long should the fade up last?
+        /// </summary>
         [Group("Fade")]
         [ShowIf(nameof(useFadeEffect))]
         public float fadeUpDuration = 0.25f;
 
+        /// <summary>
+        /// How long should the fade down last?
+        /// </summary>
         [Group("Fade")]
         [ShowIf(nameof(useFadeEffect))]
         public float fadeDownDuration = 0.1f;
@@ -83,7 +92,7 @@ namespace Yarn.Unity
         /// when dialogue is complete.
         /// </summary>
         /// <returns>A completed task.</returns>
-        public override YarnTask OnDialogueCompleteAsync()
+        public override YarnTask OnDialogueCompleteAsync(CancellationToken token)
         {
             if (canvasGroup != null)
             {
@@ -122,7 +131,7 @@ namespace Yarn.Unity
         /// when dialogue begins.
         /// </summary>
         /// <returns>A completed task.</returns>
-        public override YarnTask OnDialogueStartedAsync()
+        public override YarnTask OnDialogueStartedAsync(CancellationToken token)
         {
             if (canvasGroup != null)
             {
@@ -132,6 +141,23 @@ namespace Yarn.Unity
             }
 
             return YarnTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// Fades the UI from <paramref name="alphaIn"/> to <paramref name="alphaOut"/>,
+        /// or sets it to <paramref name="alphaOut"/> immediately without <see cref="useFadeEffect"/>.
+        /// </summary>
+        /// <param name="alphaIn">The alpha at the start of the fade.</param>
+        /// <param name="alphaOut">The alpha at the end of the fade.</param>
+        /// <param name="duration">How long the fade lasts, in seconds.</param>
+        /// <param name="token">The fade ends immediately when its hurry up token is cancelled.</param>
+        public async YarnTask FadeUI(float alphaIn, float alphaOut, float duration, LineCancellationToken token)
+        {
+            if (canvasGroup != null)
+            {
+                await Effects.FadeOrSetAlphaAsync(canvasGroup, useFadeEffect, alphaIn, alphaOut,
+                    duration, token.HurryUpToken);
+            }
         }
 
         /// <summary>
@@ -162,8 +188,24 @@ namespace Yarn.Unity
         /// path="/param"/>
         /// <inheritdoc cref="DialoguePresenterBase.RunOptionsAsync"
         /// path="/returns"/>
-        public override async YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] dialogueOptions, CancellationToken cancellationToken)
+        public override async YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] dialogueOptions, LineCancellationToken cancellationToken)
         {
+            // if all options are unavailable then we need to return null
+            // it's the responsibility of the dialogue runner to handle this, not the presenter
+            bool anyAvailable = false;
+            foreach (var option in dialogueOptions)
+            {
+                if (option.IsAvailable)
+                {
+                    anyAvailable = true;
+                    break;
+                }
+            }
+            if (!anyAvailable)
+            {
+                return null;
+            }
+
             // If we don't already have enough option views, create more
             while (dialogueOptions.Length > optionViews.Count)
             {
@@ -177,13 +219,13 @@ namespace Yarn.Unity
             // A cancellation token source that becomes cancelled when any
             // option item is selected, or when this entire option view is
             // cancelled
-            var completionCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var completionCancellationSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken.NextContentToken);
 
             async YarnTask CancelSourceWhenDialogueCancelled()
             {
                 await YarnTask.WaitUntilCanceled(completionCancellationSource.Token);
 
-                if (cancellationToken.IsCancellationRequested == true)
+                if (cancellationToken.IsNextContentRequested == true)
                 {
                     // The overall cancellation token was fired, not just our
                     // internal 'something was selected' cancellation token.
@@ -287,8 +329,11 @@ namespace Yarn.Unity
                     {
                         // we get the substring of 0 -> markup position
                         // and replace that range with ...
-                        var end = lineText.Substring(markup.Position);
-                        lineText = "..." + end;
+                        if (markup.Position <= lineText.Length) // Bounds check
+                        {
+                            var end = lineText.Substring(markup.Position);
+                            lineText = "..." + end;
+                        }
                     }
 
                     if (lastLineText != null)
@@ -304,11 +349,7 @@ namespace Yarn.Unity
                 }
             }
 
-            if (useFadeEffect && canvasGroup != null)
-            {
-                // fade up the UI now
-                await Effects.FadeAlphaAsync(canvasGroup, 0, 1, fadeUpDuration, cancellationToken);
-            }
+            await FadeUI(0.0f, 1.0f, fadeUpDuration, cancellationToken);
 
             // allow interactivity and wait for an option to be selected
             if (canvasGroup != null)
@@ -328,21 +369,20 @@ namespace Yarn.Unity
                 canvasGroup.blocksRaycasts = false;
             }
 
-            if (useFadeEffect && canvasGroup != null)
-            {
-                // fade down
-                await Effects.FadeAlphaAsync(canvasGroup, 1, 0, fadeDownDuration, cancellationToken);
-            }
+            await FadeUI(1.0f, 0.0f, fadeDownDuration, cancellationToken);
 
             // disabling ALL the options views now
             foreach (var optionView in optionViews)
             {
-                optionView.gameObject.SetActive(false);
+                if (optionView != null)
+                {
+                    optionView.gameObject.SetActive(false);
+                }
             }
             await YarnTask.Yield();
 
             // if we are cancelled we still need to return but we don't want to have a selection, so we return no selected option
-            if (cancellationToken.IsCancellationRequested)
+            if (cancellationToken.NextContentToken.IsCancellationRequested)
             {
                 return await DialogueRunner.NoOptionSelected;
             }

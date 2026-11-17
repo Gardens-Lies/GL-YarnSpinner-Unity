@@ -37,7 +37,7 @@ namespace Yarn.Unity
     /// }
     /// </code>
     /// </remarks>
-    [HelpURL("https://docs.yarnspinner.dev/using-yarnspinner-with-unity/components/variable-storage")]
+    [HelpURL("https://docs.yarnspinner.dev/components/variable-storage")]
     public class InMemoryVariableStorage : VariableStorageBehaviour, IEnumerable<KeyValuePair<string, object>>
     {
         /// <summary>
@@ -71,10 +71,11 @@ namespace Yarn.Unity
             var stringBuilder = new System.Text.StringBuilder();
             foreach (KeyValuePair<string, object> item in variables)
             {
+                // .Name gets type name without namespace prefix
                 stringBuilder.AppendLine(string.Format("{0} = {1} ({2})",
                                                         item.Key,
                                                         item.Value.ToString(),
-                                                        variableTypes[item.Key].ToString().Substring("System.".Length)));
+                                                        variableTypes[item.Key].Name));
             }
             return stringBuilder.ToString();
         }
@@ -97,6 +98,11 @@ namespace Yarn.Unity
             }
         }
 
+        /// <summary>
+        /// Sets the requested variable to have the supplied string value
+        /// </summary>
+        /// <param name="variableName">the name of the variable</param>
+        /// <param name="stringValue">the new value</param>
         public override void SetValue(string variableName, string stringValue)
         {
             ValidateVariableName(variableName);
@@ -107,6 +113,11 @@ namespace Yarn.Unity
             NotifyVariableChanged(variableName, stringValue);
         }
 
+        /// <summary>
+        /// Sets the requested variable to have the supplied float value
+        /// </summary>
+        /// <param name="variableName">the name of the variable</param>
+        /// <param name="floatValue">the new value</param>
         public override void SetValue(string variableName, float floatValue)
         {
             ValidateVariableName(variableName);
@@ -117,6 +128,11 @@ namespace Yarn.Unity
             NotifyVariableChanged(variableName, floatValue);
         }
 
+        /// <summary>
+        /// Sets the requested variable to have the supplied bool value
+        /// </summary>
+        /// <param name="variableName">the name of the variable</param>
+        /// <param name="boolValue">the new value</param>
         public override void SetValue(string variableName, bool boolValue)
         {
             ValidateVariableName(variableName);
@@ -231,6 +247,8 @@ namespace Yarn.Unity
         }
 
         #region Save/Load
+        
+        /// <inheritdoc />
         public override (Dictionary<string, float>, Dictionary<string, string>, Dictionary<string, bool>) GetAllVariables()
         {
             Dictionary<string, float> floatDict = new Dictionary<string, float>();
@@ -265,6 +283,7 @@ namespace Yarn.Unity
             return (floatDict, stringDict, boolDict);
         }
 
+        /// <inheritdoc />
         public override void SetAllVariables(Dictionary<string, float> floats, Dictionary<string, string> strings, Dictionary<string, bool> bools, bool clear = true)
         {
             if (clear)

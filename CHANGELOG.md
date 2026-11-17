@@ -8,15 +8,340 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## [3.3.0] 17 Nov 2026
+
+Version 3.3 is a significant update to two main areas of Yarn Spinner for Unity:
+
+- **Async everywhere:** The `DialogueRunner` now uses async methods across much more of its API.
+- **Async functions:** Functions can now return an awaitable type, and can take as long as they need to return a value. The dialogue runner will pause until the function returns.
+- **Cancellable commands and functions:** If the last parameter of a command or function's method is `CancellationToken` or a `LineCancellationToken`, Yarn Spinner will provide it with a token that becomes cancelled when the command or function should return early.
+- **Dialogue Presenter methods are now virtual:** Previously, when you were implementing a custom dialogue presenter, you had to implement every single method, even if they did nothing. Now, you can implement just the ones that are relevant to you. (We'll take care of doing all of the nothing for you.)
+- **Commands and functions can now take custom objects as parameters:** To use a custom object as a parameter, create a static public method that returns bool and takes two parameters: a string, and an `out` parameter of your custom object's type. Add the `YarnConverter` attribute to this method, and Yarn Spinner will invoke it to convert from strings to your object's type.
+    ```csharp
+    public class Tool {
+      public string Name { get; set; }
+      public int Durability { get; set; }
+    }
+
+    [YarnConverter(typeof(Tool))]
+    public static bool TryGetTool(string input, out Tool value)
+    {  
+      value = /* use 'input' to get a Tool instance */ ;
+
+      return true;
+    }
+
+    [YarnCommand("dig")]
+    public static void Dig(Tool tool)
+    {
+        Debug.Log($"I am digging a hole with {tool.Name}!");
+        tool.Durability--;
+    }
+    ```
+- **Definitions files are stored relative to the project root:** Previously, references to the `.ysls.json` files that `.yarnproject`s use to identify commands and functions were stored as a relative path to the file, which was brittle and caused breakages if the project file moved. They're now stored as paths relative to the root of the project, which won't change when the Yarn Project moves.
+- **Using lambdas for commands and functions is now deprecated:** Using a lambda when registering a command or function at runtime is now deprecated, because it's slower, can lead to unintended bugs, and isn't automatically cleaned up.
+- **Undeclared functions are now errors:** If your Yarn script makes use of functions that the compiler doesn't know about, it will result in an error.
+  - In order to assist with the migration from previous versions of Yarn Spinner, if your `.yarnproject` file was created by a previous version, undeclared functions will result in a warning and will prompt you to upgrade your project. Note that not all features from Yarn Spinner v3.3 may be available until you upgrade your project file.
+
+Check out the new [docs website](https://yarnspinner.dev/docs/unity/) for v3.3!
+
+### Added
+
+- Added filtering in `[YarnNode]` dropdowns (thanks to  [Shane Marks](https://github.com/unknowndevice)!).
+  - You can now limit which nodes appear in the Inspector by specifying a filter string in `YarnNode`-attributed strings.
+  - To filter the list, provide a `filter` parameter on your `[YarnNode]` attribute:
+    ```csharp
+    public YarnProject project;
+
+    // Only show nodes in 'project' whose title contains 'Start'
+    [YarnNode(nameof(project), filter: "Start")]
+    public string node;
+    ```
+  - You can customise how the filtering is done by providing a `filterType`:
+    ```csharp
+    // Only show nodes whose titles contain "Start" (this is the default)
+    [YarnNode(nameof(project), filterType: YarnNodeFilter.Contains, filter: "Start")]
+    
+    // Only show nodes whose titles start with "Entry"
+    [YarnNode(nameof(project), filterType: YarnNodeFilter.StartsWith, filter: "Entry")]
+    
+    // Only show nodes whose titles end with "Entry"
+    [YarnNode(nameof(project), filterType: YarnNodeFilter.EndsWith, filter: "Entry")]
+
+    // Only show nodes whose titles match the regular expression "Test[0-9]+"
+    [YarnNode(nameof(project), filterType: YarnNodeFilter.MatchesRegex, filter: "Test[0-9]+")]
+    ```
+  - You can customise which header to filter on. By default, nodes will be filtered based on their `title`, but you can specify most other headers, including `tags`, `cluster` or your own custom headers.
+    ```csharp
+    // Only show nodes whose colour in the editor is red
+    [YarnNode(nameof(project), filterHeader: "color", filter: "red")]
+    ```
+  - Filtering is case-insensitive for all filter types except `YarnNodeFilter.MatchesRegex`.
+
+### Changed
+- Paths in generated YSLS files now use a consistent path separator (the forward slash `/`), independent of the current operating system.
+- `YarnNode` and `DialogueReference` now sort their nodes alphabetically.
+- `IRequestNextLine` has been replaced with `IContentSource`.
+
+## [3.2.8]
+
+- Updated Yarn Spinner DLLs to target .NET Standard 2.1.
+- Removed a number of unnecessary .NET Standard 2.0 supporting DLLs.
+- Fixed an issue where IL2CPP builds would fail on Unity 6.5.
+
+## [3.2.7] 2026-07-04
+
+### Changed
+
+- Fixed an issue where Yarn Spinner would fail to compile if the Input System was not enabled.
+
+## [3.2.6] 2026-07-03
+
+### Changed
+
+- Fixed an issue in the GitHub release where the built DLL didn't include v3.2.5's changes.
+
+## [3.2.5] 2026-07-03
+
+### Changed
+
+- Moved the input handling logic for `LineAdvancer` out to separate components, and made `LineAdvancer` add and remove those components depending on which mode is selected.
+- Fixed a compile error when the legacy input manager is not available.
+- Fixed an issue where YSLS files were not being written to disk.
+
+## [3.2.4] 2026-06-01
+
+### Added
+
+- Added Snaaake to Yarn Spinner+.
+- Added Classic RPG to Yarn Spinner+.
+
+### Changed
+
+- VoiceOverPresenter now no longer requires that the line's `Source` be a `DialogueRunner` in order to signal that the line should be ended at the end of playback, and instead requires that it be a new interface `IRequestLineCancellation`.
+  - Made `DialogueRunner` implement `IRequestLineCancellation`.
+  - This feature exists to support some upcoming new features.
+- Fixed a crash when importing `.yarn` files in Unity 2022.3.
+
+## [3.2.3] 2026-05-05
+
+### Added
+
+- Yarn Projects now support specifying which style line tagger to use.
+  - You can create your own by conforming to the `ILineTagGenerator` interface.
+- Warning severity diagnostics are now logged.
+  - Similar to error-level severity, due to quirks of Unity, we can't prevent these being wiped from the console.
+  - The Yarn Project will keep any relevant warnings within it however if you need to resummon them.
+
+### Changed
+
+- YSLS files are now generated with paths set relative to the project root.
+  - If the root of the project can't be determined, it will still use full path.
+- `VariableStorageBehaviour` can now add change listeners for variable defined outside of Yarn
+- Fixed a bug where empty or whitespace only file paths in diagnostics could cause importing to break and throw exceptions.
+- Yarn diagnostics generated during import now have their line number set which should let the editor jump directly to them where possible.
+- Fixed a bug that prevented sorting Unity Localization tables.
+
+## [3.2.2] 2026-04-03
+
+### Changed
+
+- Text Animator: Fixed an issue where support files were not being installed correctly
+- Text Animator: Fixed an issue where the support files for Text Animator 2 could cause a build error
+- Text Animator: Fixed an issue where the Dialogue Runner prefab was losing its reference to its typewriter.
+
+## [3.2.1] 2026-03-27
+
+### Changed
+
+- Fixed an issue in Unity 6.4 where newly created Yarn scripts could fail to import correctly.
+
+## [3.2.0] 2026-03-27
+
+### Added
+
+- When using the Unity Localization package Yarn Spinner can now sort the localisation tables based on a lines position in the file.
+  - This resolves an issue where lines added into the middle of a Yarn file. However, this does require sorting your localisation table every time you edit your Yarn files.
+  - This setting defaults to off, and can be enabled in Yarn Spinners settings in `Edit -> Project Settings -> Yarn Spinner`.
+  - When sorting, any values found in the localisation table that didn't come from your Yarn files will be logged, and sorted to the top of the table.
+- `YarnSpinnerAssemblyGeneratedYSLSPath` function to the `YarnSpinnerProjectSettings` so that each assembly can have a generated and consistent path.
+- Generated YSLS files now include subtype information for instance commands.
+  - This means a command like `<<move gary left>>` now knows that the `"gary"` is the name of a game object, and the specific game object subclass.
+  - This only works at a single level of MonoBehaviour depth; subclasses of a `MonoBehaviour` subclass will not be recognised.
+- `YarnNodeParameterAttribute` can now be added to string parameters in function and command methods
+  - This is intended to allow you to hint to the VSCode extension that, when writing this parameter in commands and functions, it should limit suggestions to nodes.
+- `YarnEnumParameterAttribute` can now be added to parameters in functions and command methods.
+  - This has one field, which is the name the enum as declared in your Yarn.
+  - This is intended to allow you to hint to the VSCode extension to offer enum based suggestions. This is a temporary solution, until forward declaration of Yarn enums into C# works.
+- Incorrectly defined parameters for commands and functions will now generate diagnostics on the C# implementation, warnings exist for:
+  - invalid types
+  - incorrectly attributed parameters
+- `ContentDidDismiss` call to the `IAsyncTypewriter` to let typewriters know they are safe to do any cleanup
+- A `TMP_Text` property called `TextElement` to the `IAsyncTypewriter`
+  - this is optional but most of the time custom typewriters will need to get the main text element anyway so might as well just have it as something they are given at the start
+
+### Changed
+
+- `YarnProjectImporter` now updates asset addresses and generates the C# variable storage class _after_ the project import completes, rather than during the import.
+- Each assembly now gets its own YSLS file when generating them.
+  - We renamed the test `.asmdef` files from `YarnSpinnerTests.x` to `YarnSpinner.Unity.Tests.X`, so that they are matched by the existing filters.
+- Generated a YSLS file now matches the newer schema. See the [Yarn Spinner core repo](https://github.com/YarnSpinnerTool/YarnSpinner/blob/main/YarnSpinner.LanguageServer/src/Server/Documentation/ysls.schema.json) for details of this.
+- When matching assets to line IDs, the importer now prefers exact matches to the line ID.
+- `YarnProjectImporterEditor` now resets some internal state when creating its UI, which should help avoid a bug where the list of sources would grow over time.
+- Added explicit registration for `UnityEngine.Awaitable`, and the missing cases for `System.Threading.Tasks.Task` commands, fixing issues where some times certain specific configurations would fail to register the command.
+  - As part of this, we also made it so Commands can now be registered with up to 16 parameters.
+  - Please don't actually register a command with 16 parameters.
+- Fixed a bug where the InterfaceContainer would sometimes lose it's connection.
+  - unsure why this happens, just Unity things™
+- Line Presenter now uses the `InterfaceContainer` for custom typewriters.
+- `.ysls.json` file generation is now on by default.
+- Yarn Spinner for Unity now works with `EntityId` objects instead of instance ID integers in Unity 6.4 and later.
+
+## [3.1.4] 2025-12-19
+
+### Changed
+
+- Fixed an issue that caused build errors when using the Text Animator add-on.
+
+## [3.1.3] 2025-12-09
+
+### Changed
+
+- Fixed an issue that caused OpenUPM downloads to fail to compile.
+
+## [3.1.1] 2025-12-03
+
+### Overview
+
+Yarn Spinner for Unity 3.1 contains a number of improvements and useful changes.
+
+#### Dialogue Runner Is Now More Async
+
+The dialogue runner's `StartDialogue` and `Stop` methods are now `async`, and return a task. When you call `StartDialogue`, you'll receive a task (either a `System.Threading.Tasks` task, a `UnityEngine.Awaitable`, or a `UniTask`) that will complete after every dialogue presenter has finished running its `OnDialogueStartedAsync` method. Likewise, the `Stop` method will finish after every dialogue presenter has finished running its `OnDialogueCompleteAsync` method. This is really useful for making sure that you don't accidentally make a change to your scene in the middle of your dialogue presenters getting ready.
+
+#### Dialogue Option Fallthrough
+
+In Yarn Spinner, you can add a condition to the end of an option. If the condition evaluates to `false`, Yarn Spinner will mark the option as "unavailable". It's up to your game to decide what that means - you might want to make the option visible but unselectable, or you might want to hide the option from the player entirely. However, if _every_ option is unavailable, the player has no option they could select. Previously, this could cause your game to have to soft-lock the player, since they weren't able to proceed.
+
+In Yarn Spinner 3.1, dialogue presenters are now allowed to tell the Dialogue Runner that no option was selected at all. When this happens, Yarn Spinner will skip the options and move on to the next part of the script:
+
+```
+Guard: Who goes there?
+
+// If the player is a thief, a royal visitor, or a merchant, then
+// go run the appropriate conversation for that. The player might be
+// some combination of the three, so let them choose.
+-> A thief! <<if $player_is_thief>>
+    <<jump Guard_Thief_Conversation>>
+-> A royal visitor! <<if $player_is_royal_visitor>>
+    <<jump Guard_RoyalVisitor_Conversation>>
+-> A merchant! <<if $player_is_merchant>>
+    <<jump Guard_Merchant_Conversation>>
+
+// But if the player is NONE of those, then none of the options would have
+// been available. We'll fall through to here.
+
+Player: I'm nobody!
+<<jump Guard_Nobody_Conversation>>
+```
+
+> [!NOTE]
+> You can turn off this behaviour by setting the `allowOptionFallthrough` property on your `DialogueRunner` to `false`.
+
+#### Lines Know Where They Came From
+
+When Yarn Spinner sends a line to your game, it wraps up the line in an object called a [`LocalizedLine`](https://docs.yarnspinner.dev/api/csharp/yarn.unity/yarn.unity.localizedline). Previously, if your game has multiple Dialogue Runners that are running at the same time, it wasn't possible to know which runner the line came from. In Yarn Spinner 3.1, the `LocalizedLine` now has a [`Source`](https://docs.yarnspinner.dev/3.1/api/csharp/yarn.unity/yarn.unity.localizedline/yarn.unity.localizedline.source) property that tells you where it came from.
+
+#### Options Can Now Be Hurried Up And Cancelled
+
+Just like how lines have a separate 'hurry up' and 'next' cancellation tokens that act as a signal to move things along, options now have the same 'hurry up' and 'next' tokens. (Previously, they only had a single cancellation token that signalled that option selection was no longer necessary.) This allows your game to signal that you want to hurry up the presentation of your dialogue's options.
+
+#### New Typewriter System
+
+We've updated the way that typewriters are used in the built-in Line Presenter system, to make it easier to customise. This is useful for when you want to take full control over how the line appears over time, and for when you want to have in-game events occur (like sound effects) as the line appears.
+
+To create a custom typewriter, create a class that implements [`IAsyncTypewriter`](https://docs.yarnspinner.dev/3.1/api/csharp/yarn.unity/yarn.unity.iasynctypewriter). You can find an example of how to write a custom typewriter in the source code for the [`LetterTypewriter`](https://github.com/YarnSpinnerTool/YarnSpinner-Unity/blob/main/Runtime/Views/Typewriter/LetterTypewriter.cs) class.
+
+> [!NOTE]
+> As part of this change, the On Character Typed event on Line Presenter has been removed. If you want to run code every time a character appears, create a new script that subclasses from [ActionMarkupHandler](https://docs.yarnspinner.dev/3.1/api/csharp/yarn.unity/yarn.unity.actionmarkuphandler), and add that to an object in your scene. Add that object to the Line Presenter's "Event Handlers" list. In your ActionMarkupHandler subclass, you can write code that gets called every time characters appear on screen by implementing the [OnCharacterWillAppear method](https://docs.yarnspinner.dev/3.1/api/csharp/yarn.unity/yarn.unity.actionmarkuphandler/yarn.unity.actionmarkuphandler.oncharacterwillappear).
+
+#### Removed Legacy `DialogueView` Classes
+
+Yarn Spinner 3.0 introduced a new programming model for presenting dialogue, called [Dialogue Presenters](https://docs.yarnspinner.dev/3.1/components/dialogue-view). As part of the rollout of this new API, we made the old `DialogueView` class act as a compatibility layer, and marked it as deprecated. Yarn Spinner 3.1 removes this deprecated code. If you have code that started life as a Yarn Spinner 2.0 project, you will need to [migrate your legacy dialogue presentation UI code to use Dialogue Presenters](https://docs.yarnspinner.dev/3.1/changelog/upgrading-from-yarn-spinner-2#dialogueviewbase-is-now-dialoguepresenter) by changing their parent class to `DialoguePresenter`, and implementing the new methods for presenting lines and options
+
+### Added
+
 - `DialogueRunner` will now log warnings if a dialogue presenter throws an `OperationCanceledException` - these usually indicate that a task they were themselves waiting on was cancelled, and that the presenter didn't clean up.
 - The generated `.ysls.json` file now contains more complete command and function information.
+- Added a new attribute for Yarn Spinner editors: `LabelFrom` allows specifying a dynamic label for a property by invoking a method.
+- Added multiple typewriters and support for them on the `LinePresenter`:
+  - By Word
+  - By Letter
+  - Instantly
+- Added a virtual `IAsyncTypewriter` field `Typewriter` onto `DialoguePresenterBase`
+- Added new virtual `OnNodeEnter` and `OnNodeExit` calls onto `DialoguePresenterBase`.
+- Added a static `FindRunner` call onto `DialogueRunner`, which first tries to find it on the game object itself, followed by anywhere in the scene.
+- Added a `Source` field to the `LocalizedLine`, this can be of any type but by default will be the `DialogueRunner` that caused the line to be created
+- Options can now be hurried up, the same as lines
+  - added `RunOptionsAsync(DialogueOption[], LineCancellationToken)` to `DialoguePresenterBase`.
+    - this method is virtual and is now the recommended way to respond to options
+    - the default implementation just returns nothing selected
+  - added `NextContentToken` to `LineCancellationToken` which mirrors the existing `NextLineToken`.
+  - added `IsNextContentRequested` to `LineCancellationToken` which mirrors the existing `IsNextLineRequested` bool.
+  - added `RequestHurryUpOption` to `DialogueRunner`.
+  - added hurry up option inputs to `LineAdvancer`
+- `LineAdvancer` now better handles situations where you want to use the same input for hurrying up and skipping lines.
+  - This behaviour is controllable via the `separateHurryUpAndAdvanceControls` field
+- Added a new container type `InterfaceContainer`, a wrapper class to clean up some interface serialisation pains
 
 ### Changed
 
 - Fixed a compiler error that occurred when the Unity Input System was enabled, but not actually installed.
 - Fixed an error where calls to `DialogueRunner.AddFunction()` in methods that are in nested classes would cause the function to be registered multiple times, leading to compiler failures.
+- Fixed a bug where versions of Unity prior to Unity 2022.3.33 had compilation errors around packages.
+- Fixed a bug where some inspector property fields weren't bound preventing configuring Unity localisation or addressables in Unity 2022.3.
+- Added more specificity to the `Analyser` class's use of the C# code generation API.
+- `AddLineTagsToFilesInYarnProject` is now `public`, allowing for easier use of it in editor scripting.
+- Showing character name behaviour in the `LinePresenter` now correctly matches the documentation.
+- `DialogueRunner.StartDialogue` is now asynchronous and waits for all presenters to finish their `OnDialogueStartedAsync` calls before exiting
+- `DialogueRunner.Stop` is now asynchronous and waits for all presenters to finish their `OnDialogueCompleteAsync` calls before exiting
+- Fixed a bug where the continue button on the `LinePresenter` could become non interactive.
+- `PaletteMarkerProcessor` and `StyleMarkerProcessor` now look less aggressively for their Dialogue Runner.
+- `LocalizedLine.TextWithoutCharacterName` still does not contain the text of the character, but does contain the Markup attribute of the character.
+  - This allows other parts of your dialogue UI that might need to know who said a line still use the `TextWithoutCharacterName` property.
+- `ReplacementMarkuphandler` now returns a `ReplacementMarkerResult` instead of a list of diagnostics.
+  - This is to match the behaviour change in core to fix a markup offset bug
+- `OptionsPresenter` now returns null if there are no options that can be selected due to their availability.
+- If there are no available options, Dialogue Runner will now fallthrough to the next piece of content
+  - This behaviour can be disabled in the `allowOptionFallthrough` field on the runner.
+- Fixed an issue where Builtin localisation would always use the base localisation when fetching a localised asset ([#344](https://github.com/YarnSpinnerTool/YarnSpinner-Unity/issues/344))
+- The UPM samples installer now installs from a specific tag, rather than the head of the repo.
+- Options can now be hurried up, the same as lines. This necessitated several obsolences:
+  - `RunOptionsAsync(DialogueOption[], CancellationToken)` is now obsolete.
+  - `IsNextLineRequested` is now obsolete.
+  - `NextLineToken` is now obsolete.
+- `RunOptionsAsync(DialogueOption[], CancellationToken)` is now virtual.
+  - the default implementation selects nothing and instantly returns.
+- The Dialogue Presenter template file now has the newer form of `RunOptionsAsync`.
+- Built in presenters now use the newer form of `RunOptionsAsync`.
+- The `InputSystemAvailability` static class has been made public.
+- `LineAdvancer` will now ignore the signal to 'hurry up' if it comes in the same frame as line was requested to be shown.
+  - This fixes a bug where the same key was used to start conversation as well hurry up dialogue.
+- Fixed an issue on `EnsureInputModuleAvailable` where, if there was an input system in the scene but it was of the wrong type, the console would fill up with errors.
+- `DialogueRunner` now waits one frame before starting dialogue when automatically start dialogue is turned on.
 
 ### Removed
+
+- Removed `ActionMarkupHandlers` list from `DialoguePresenterBase`. This was only used by the default line presenter, and is now handled by the typewriter system. This which is more representative of what Action Markup Handling already entailed.
+- Removed the legacy Dialogue Views, Typewriter, and Effects.
+- Removed the `ReplacementMarkupHandler.NoDiagnostics` static property, as this no longer matches any need due to core changes around replacement markup.
+- Removed `RunOptionsAsync(DialogueOption[], CancellationToken)` from `LinePresenter`. This method is now virtual, and the default implementation does what we needed here.
 
 ## [3.0.3] 2025-06-21
 

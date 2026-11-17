@@ -299,82 +299,8 @@ namespace Yarn.Unity
         }
 
         /// <summary>
-        /// Creates a stack of typewriter pauses to use to temporarily halt the
-        /// typewriter effect.
+        /// Convenience property to determine if the game is in playmode or editor mode
         /// </summary>
-        /// <remarks>
-        /// This is intended to be used in conjunction with the <see
-        /// cref="Effects.PausableTypewriter"/> effect. The stack of tuples
-        /// created are how the typewriter effect knows when, and for how long,
-        /// to halt the effect.
-        /// <para>
-        /// The pause duration property is in milliseconds but all the effects
-        /// code assumes seconds So here we will be dividing it by 1000 to make
-        /// sure they interconnect correctly.
-        /// </para>
-        /// </remarks>
-        /// <param name="line">The line from which we covet the pauses</param>
-        /// <returns>A stack of positions and duration pause tuples from within
-        /// the line</returns>
-        public static Stack<(int position, float duration)> GetPauseDurationsInsideLine(Markup.MarkupParseResult line)
-        {
-            var pausePositions = new Stack<(int, float)>();
-            var label = "pause";
-
-            // sorting all the attributes in reverse positional order this is so
-            // we can build the stack up in the right positioning
-            var attributes = line.Attributes;
-            attributes.Sort((a, b) => (b.Position.CompareTo(a.Position)));
-            foreach (var attribute in line.Attributes)
-            {
-                // if we aren't a pause skip it
-                if (attribute.Name != label)
-                {
-                    continue;
-                }
-
-                // did they set a custom duration or not, as in did they do
-                // this: 
-                //
-                // Alice: this is my line with a [pause = 1000 /]pause in the
-                //     middle 
-                //
-                // or did they go:
-                //
-                // Alice: this is my line with a [pause /]pause in the middle
-                if (attribute.Properties.TryGetValue(label, out Yarn.Markup.MarkupValue value))
-                {
-                    // depending on the property value we need to take a
-                    // different path this is because they have made it an
-                    // integer or a float which are roughly the same note to
-                    // self: integer and float really ought to be convertible...
-                    // but they also might have done something weird and we need
-                    // to handle that
-                    switch (value.Type)
-                    {
-                        case Yarn.Markup.MarkupValueType.Integer:
-                            float duration = value.IntegerValue;
-                            pausePositions.Push((attribute.Position, duration / 1000));
-                            break;
-                        case Yarn.Markup.MarkupValueType.Float:
-                            pausePositions.Push((attribute.Position, value.FloatValue / 1000));
-                            break;
-                        default:
-                            Debug.LogWarning($"Pause property is of type {value.Type}, which is not allowed. Defaulting to one second.");
-                            pausePositions.Push((attribute.Position, 1));
-                            break;
-                    }
-                }
-                else
-                {
-                    // they haven't set a duration, so we will instead use the
-                    // default of one second
-                    pausePositions.Push((attribute.Position, 1));
-                }
-            }
-            return pausePositions;
-        }
-
         public static bool IsInPlaymode
         {
             get
@@ -395,6 +321,27 @@ namespace Yarn.Unity
 #endif
                 return true;
             }
+        }
+
+        /// <summary>
+        /// Attempts to find the "nearest" dialogue runner for the requested component
+        /// </summary>
+        /// <remarks>
+        /// Because there can be multiple dialogue runners in a scene performing a normal FindAnyObjectByType call may return a runner that isn't the runner we are after.
+        /// This method makes an assumption about scene hierarchy (but one we've seen multiple times) that the dialogue runner you care about is a parent or sibling of the current component.
+        /// This works because dialogue and related components tend to be all ultimately packaged together into one Game Object in the scene.
+        /// If this assumption fails to find  it will fall back on a FindAnyObjectByType call to collect any runner.
+        /// </remarks>
+        /// <param name="component">The component whos dialogue runner we are after</param>
+        /// <returns>The runner, or null if one couldn't be found</returns>
+        public static DialogueRunner? FindRunner(Component component)
+        {
+            var runner = component.GetComponentInParent<DialogueRunner>();
+            if (runner == null)
+            {
+                runner = FindAnyObjectByType<DialogueRunner>();
+            }
+            return runner;
         }
     }
 }

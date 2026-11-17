@@ -46,11 +46,15 @@ namespace Yarn.Unity
             NeedsUpgradeFromV1 = 3,
         }
 
+        public int ProjectFileVersion = -1;
+
         public ImportStatusCode ImportStatus = ImportStatusCode.Unknown;
 
         public List<DiagnosticEntry> diagnostics = new List<DiagnosticEntry>();
 
         public List<string> sourceFilePatterns = new List<string>();
+
+        public List<string> definitionFilePatterns = new List<string>();
 
         public List<LocalizationEntry> localizations = new List<LocalizationEntry>();
 

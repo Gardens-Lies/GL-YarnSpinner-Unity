@@ -107,7 +107,6 @@ namespace Yarn.Unity
     /// </remarks>
     public abstract class ActionMarkupHandler : MonoBehaviour, IActionMarkupHandler
     {
-
         /// <inheritdoc/>
         public abstract void OnPrepareForLine(MarkupParseResult line, TMP_Text text);
 
@@ -122,36 +121,5 @@ namespace Yarn.Unity
 
         /// <inheritdoc/>
         public abstract void OnLineWillDismiss();
-
-        protected static int NormalizePosition(int basePosition, MarkupParseResult line)
-        {
-            return ActionMarkupHandlerUtils.NormalizePosition(basePosition, line);
-        }
-    }
-
-    public static class ActionMarkupHandlerUtils
-    {
-
-        /// <summary>
-        /// Normalize position of attribute considering inserted markup.
-        /// </summary>
-        /// <param name="basePosition">Initial attribute position</param>
-        /// <param name="line">Parsed line</param>
-        /// <returns>Normalized position</returns>
-        public static int NormalizePosition(int basePosition, MarkupParseResult line)
-        {
-
-            int newPosition = basePosition;
-
-            var markups = line.SharedMarkupsMeta.MarkupsMeta;
-            int i = 0;
-            while (i < markups.Count && markups[i].MarkupPosition < basePosition)
-            {
-                newPosition -= line.SharedMarkupsMeta.MarkupsMeta[i].MarkupLength;
-                i++;
-            }
-
-            return newPosition;
-        }
     }
 }

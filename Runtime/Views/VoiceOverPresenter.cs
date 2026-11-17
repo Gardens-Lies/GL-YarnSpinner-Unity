@@ -17,7 +17,6 @@ namespace Yarn.Unity
     /// A subclass of <see cref="DialoguePresenterBase"/> that plays voice-over
     /// <see cref="AudioClip"/>s for lines of dialogue.
     /// </summary>
-    /// <seealso cref="DialogueViewBase"/>
     public sealed class VoiceOverPresenter : DialoguePresenterBase
     {
 
@@ -28,17 +27,6 @@ namespace Yarn.Unity
         /// </summary>
         [Group("Line Management")]
         public bool endLineWhenVoiceoverComplete = true;
-
-        /// <summary>
-        /// The dialogue runner to notify of line completion.
-        /// </summary>
-        /// <remarks>This value is only used when <see
-        /// cref="endLineWhenVoiceoverComplete"/> is <see
-        /// langword="true"/>.</remarks>
-        [Group("Line Management")]
-        [ShowIf(nameof(endLineWhenVoiceoverComplete))]
-        [MustNotBeNull("Required when " + nameof(endLineWhenVoiceoverComplete) + " is set")]
-        public DialogueRunner? dialogueRunner;
 
         /// <summary>
         /// The fade out time when the line is interrupted during playback.
@@ -90,11 +78,6 @@ namespace Yarn.Unity
 
         void Reset()
         {
-            if (dialogueRunner == null)
-            {
-                dialogueRunner = FindAnyObjectByType<DialogueRunner>();
-            }
-
             if (audioSource == null)
             {
                 audioSource = GetComponentInChildren<AudioSource>();
@@ -127,6 +110,8 @@ namespace Yarn.Unity
                 voiceOverClip = result;
             }
 
+            DialogueRunner? dialogueRunner = dialogueLine.Source as DialogueRunner;
+
             if (voiceOverClip == null)
             {
                 Debug.LogError($"Playing voice over failed because the localised line {dialogueLine.TextID} " +
@@ -137,7 +122,7 @@ namespace Yarn.Unity
                     // If we didn't get a line, but we were configured to
                     // advance the line on end, then we should act as though
                     // we've reached the end of the line now and advance.
-                    dialogueRunner.RequestNextLine();
+                    dialogueRunner.RequestNextContent();
                 }
                 return;
             }
@@ -154,7 +139,13 @@ namespace Yarn.Unity
             {
                 await YarnTask.Delay(
                     TimeSpan.FromSeconds(waitTimeBeforeLineStart),
-                    lineCancellationToken.NextLineToken).SuppressCancellationThrow();
+                    lineCancellationToken.NextContentToken).SuppressCancellationThrow();
+            }
+
+            if (!DialogueRunner.IsInPlaymode)
+            {
+                // We left play mode while waiting before starting playback
+                return;
             }
 
             // Start playing the audio.
@@ -162,26 +153,28 @@ namespace Yarn.Unity
 
             // Playback may not begin immediately, so wait until it does (or if
             // the line is interrupted.)
-            await YarnTask.WaitUntil(() => audioSource.isPlaying, lineCancellationToken.NextLineToken).SuppressCancellationThrow();
+            await YarnTask.WaitUntil(() => audioSource.isPlaying, lineCancellationToken.NextContentToken).SuppressCancellationThrow();
 
             if (!DialogueRunner.IsInPlaymode)
             {
+                // We left play mode before the audio started playing
                 return;
             }
 
             // Now wait until either the audio source finishes playing, or the
             // line is interrupted.
-            await YarnTask.WaitUntil(() => !audioSource.isPlaying, lineCancellationToken.NextLineToken).SuppressCancellationThrow();
+            await YarnTask.WaitUntil(() => !audioSource.isPlaying, lineCancellationToken.NextContentToken).SuppressCancellationThrow();
 
             if (!DialogueRunner.IsInPlaymode)
             {
+                // We left play mode while the audio was playing
                 return;
             }
 
             // If the line was interrupted while we were playing, we need to
             // wrap up the playback as quickly as we can. We do this here with a
             // fade-out to zero over fadeOutTimeOnLineFinish seconds.
-            if (audioSource.isPlaying && lineCancellationToken.IsNextLineRequested)
+            if (audioSource.isPlaying && lineCancellationToken.IsNextContentRequested)
             {
                 // Fade out voice over clip
                 float lerpPosition = 0f;
@@ -210,12 +203,18 @@ namespace Yarn.Unity
             // because the user has already indicated that they're fine with
             // things moving faster than sounds normal.)
 
-            if (!lineCancellationToken.IsNextLineRequested && waitTimeAfterLineComplete > 0)
+            if (!lineCancellationToken.IsNextContentRequested && waitTimeAfterLineComplete > 0)
             {
                 await YarnTask.Delay(
                     TimeSpan.FromSeconds(waitTimeAfterLineComplete),
-                    lineCancellationToken.NextLineToken
+                    lineCancellationToken.NextContentToken
                 ).SuppressCancellationThrow();
+            }
+
+            if (!DialogueRunner.IsInPlaymode)
+            {
+                // We left play mode while waiting after the line completed
+                return;
             }
 
             if (endLineWhenVoiceoverComplete)
@@ -226,7 +225,7 @@ namespace Yarn.Unity
                 }
                 else
                 {
-                    dialogueRunner.RequestNextLine();
+                    dialogueRunner.RequestNextContent();
                 }
             }
         }
@@ -235,7 +234,7 @@ namespace Yarn.Unity
         /// <remarks>
         /// Stops any audio if there is still any playing.
         /// </remarks>
-        public override YarnTask OnDialogueCompleteAsync()
+        public override YarnTask OnDialogueCompleteAsync(CancellationToken token)
         {
             // just in case we are still playing audio we want it to stop
             audioSource.Stop();
@@ -244,12 +243,7 @@ namespace Yarn.Unity
         }
 
         /// <inheritdoc/>
-        public override YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] dialogueOptions, CancellationToken cancellationToken)
-        {
-            return DialogueRunner.NoOptionSelected;
-        }
-        /// <inheritdoc/>
-        public override YarnTask OnDialogueStartedAsync()
+        public override YarnTask OnDialogueStartedAsync(CancellationToken token)
         {
             return YarnTask.CompletedTask;
         }

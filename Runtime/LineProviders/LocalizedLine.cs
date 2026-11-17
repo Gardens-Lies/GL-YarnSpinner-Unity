@@ -3,16 +3,22 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
 using UnityEngine;
+
+#if UNITY_6000_6_OR_NEWER
+using Unity.Scripting.LifecycleManagement;
+#else
+using Yarn.Unity.Shim;
+#endif
+
 #nullable enable
 
 namespace Yarn.Unity
 {
-
     /// <summary>
     /// Represents a line, ready to be presented to the user in the localisation
     /// they have specified.
     /// </summary>
-    public class LocalizedLine
+    public partial class LocalizedLine
     {
         /// <summary>
         /// DialogueLine's ID
@@ -62,6 +68,17 @@ namespace Yarn.Unity
         public Object? Asset;
 
         /// <summary>
+        /// The object that created this line.
+        /// Most of the time will be the <see cref="DialogueRunner"/> that passed the presenter the line.
+        /// </summary>
+        /// <remarks>
+        /// This exists for situations where you need the dialogue runner (or your custom equivalent) to send back messages.
+        /// In particular this is used by the <see cref="VoiceOverPresenter"/> to get a reference to the dialogue runner to advance lines after playback is finished without needing a specific reference.
+        /// Allowing the presenter to be reused across multiple runners.
+        /// </remarks>
+        public object? Source;
+
+        /// <summary>
         /// The underlying <see cref="Yarn.Markup.MarkupParseResult"/> for this
         /// line.
         /// </summary>
@@ -82,7 +99,12 @@ namespace Yarn.Unity
                 // If a 'character' attribute is present, remove its text
                 if (Text.TryGetAttributeWithName("character", out var characterNameAttribute))
                 {
-                    return Text.DeleteRange(characterNameAttribute);
+                    // because of how we delete the text we also clear up the attributes
+                    // most of the time this is the right play
+                    // however the character feels important enough to add it back in
+                    var characterless = Text.DeleteRange(characterNameAttribute);
+                    characterless.Attributes.Add(characterNameAttribute);
+                    return characterless;
                 }
                 else
                 {
@@ -95,6 +117,7 @@ namespace Yarn.Unity
         /// A <see cref="LocalizedLine"/> object that represents content not
         /// being found.
         /// </summary>
+        [NoAutoStaticsCleanup]
         public static readonly LocalizedLine InvalidLine = new LocalizedLine
         {
             Asset = null,
@@ -102,7 +125,7 @@ namespace Yarn.Unity
             RawText = "!! ERROR: Missing line!",
             Substitutions = System.Array.Empty<string>(),
             TextID = "<missing>",
-            Text = new Markup.MarkupParseResult("!! ERROR: Missing line!", new System.Collections.Generic.List<Markup.MarkupAttribute>(), new())
+            Text = new Markup.MarkupParseResult("!! ERROR: Missing line!", new System.Collections.Generic.List<Markup.MarkupAttribute>())
         };
     }
 

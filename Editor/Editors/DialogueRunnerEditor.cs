@@ -16,6 +16,12 @@ using System.Reflection;
 using Yarn.Unity.UnityLocalization;
 using Yarn.Unity.Attributes;
 
+#if UNITY_6000_6_OR_NEWER
+using Unity.Scripting.LifecycleManagement;
+#else
+using Yarn.Unity.Shim;
+#endif
+
 namespace Yarn.Unity.Editor
 {
 
@@ -382,6 +388,62 @@ namespace Yarn.Unity.Editor
                 return $@"{e.GetType().Name} thrown when calling ""{methodName}"": {e.Message ?? "(no message)"}";
             }
         }
+        /// <summary>
+        /// Gets information for showing a message box from a
+        /// MessageBoxAttribute on a serialized object.
+        /// </summary>
+        /// <returns>A <see cref="MessageBoxAttribute.Message"/> with the text
+        /// and type of the message box.
+        /// </returns>
+        public static string GetLabel(this LabelFromAttribute messageBoxAttribute, SerializedObject serializedObject)
+        {
+            if (serializedObject == null || serializedObject.targetObject == null)
+            {
+                return "Serialized object is null";
+            }
+            var methodName = messageBoxAttribute.SourceMethod;
+            if (serializedObject.isEditingMultipleObjects)
+            {
+                // If we're editing multiple objects, show only a placeholder
+                return "-";
+            }
+            var target = serializedObject.targetObject;
+            var method = serializedObject.targetObject.GetType().GetMethod(methodName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            if (method == null)
+            {
+                return $@"Failed to find an instance method ""{methodName}"" on this object";
+            }
+            if (method.ReturnType != typeof(string))
+            {
+                return $@"Method ""{methodName}"" must return a string";
+            }
+            if (method.GetParameters().Length != 0)
+            {
+                return $@"Method ""{methodName}"" must not accept any parameters";
+            }
+            try
+            {
+                var result = method.Invoke(target, Array.Empty<object>());
+                if (result is string message)
+                {
+                    return message;
+                }
+                else
+                {
+                    return $@"Method ""{methodName}"" did not return a valid message";
+                }
+            }
+            catch (TargetInvocationException e)
+            {
+                Debug.LogException(e.InnerException);
+                return $@"Method ""{methodName}"" threw a {e.InnerException.GetType().Name}: {e.InnerException.Message ?? "(no message)"}";
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, target);
+                return $@"{e.GetType().Name} thrown when calling ""{methodName}"": {e.Message ?? "(no message)"}";
+            }
+        }
     }
 
     /// <summary>
@@ -578,6 +640,10 @@ namespace Yarn.Unity.Editor
                         }
                         result = true;
                         break;
+                    case LabelFromAttribute labelFromAttribute:
+                        label = labelFromAttribute.GetLabel(property.serializedProperty.serializedObject);
+                        result = true;
+                        break;
                     default:
                         result = $"Unknown attribute {attr.GetType()}";
                         break;
@@ -593,7 +659,14 @@ namespace Yarn.Unity.Editor
             string GetGroupID(GroupAttribute group)
             {
                 var target = property.serializedProperty.serializedObject.targetObject;
-                var uniqueGroupID = $"{target.GetType()}_{target.GetEntityId()}_group_{group.GroupName}";
+
+                string uniqueID;
+#if UNITY_6000_4_OR_NEWER
+                uniqueID = target.GetEntityId().ToString();
+#else
+                uniqueID = target.GetInstanceID().ToString();
+#endif
+                var uniqueGroupID = $"{target.GetType()}_{uniqueID}_group_{group.GroupName}";
                 return uniqueGroupID;
             }
 
@@ -816,12 +889,37 @@ namespace Yarn.Unity.Editor
     [CustomEditor(typeof(BuiltinLocalisedLineProvider))]
     public class BuiltinLocalisedLineProviderEditor : YarnEditor { }
 
+    namespace LineAdvancerInput
+    {
+        /// <summary>
+        /// The editor for <see cref="Yarn.Unity.LineAdvancerInput.InputActions"/> objects.
+        /// </summary>
+        [CanEditMultipleObjects]
+        [CustomEditor(typeof(Yarn.Unity.LineAdvancerInput.InputActions))]
+        public class InputActionsEditor : YarnEditor { }
+
+        /// <summary>
+        /// The editor for <see cref="Yarn.Unity.LineAdvancerInput.InputActions"/> objects.
+        /// </summary>
+        [CanEditMultipleObjects]
+        [CustomEditor(typeof(Yarn.Unity.LineAdvancerInput.KeyCodes))]
+        public class KeyCodesEditor : YarnEditor { }
+
+        /// <summary>
+        /// The editor for <see cref="Yarn.Unity.LineAdvancerInput.LegacyInputAxes"/> objects.
+        /// </summary>
+        [CanEditMultipleObjects]
+        [CustomEditor(typeof(Yarn.Unity.LineAdvancerInput.LegacyInputAxes))]
+        public class LegacyInputAxesEditor : YarnEditor { }
+    }
+
     /// <summary>
     /// The editor for <see cref="DialogueRunner"/> objects.
     /// </summary>
     [CanEditMultipleObjects]
     [CustomEditor(typeof(DialogueRunner))]
-    public class DialogueRunnerEditor : YarnEditor
+    [NoAutoStaticsCleanup]
+    public partial class DialogueRunnerEditor : YarnEditor
     {
         private const string docsLabel = "Docs";
         private const string samplesLabel = "Samples";
