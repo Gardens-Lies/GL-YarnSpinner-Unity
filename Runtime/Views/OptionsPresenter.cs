@@ -64,14 +64,23 @@ namespace Yarn.Unity
         [Space]
         public bool showUnavailableOptions = false;
 
+        /// <summary>
+        /// Should the UI fade to show and hide the options?
+        /// </summary>
         [Group("Fade")]
         [Label("Fade UI")]
         public bool useFadeEffect = true;
 
+        /// <summary>
+        /// How long should the fade up last?
+        /// </summary>
         [Group("Fade")]
         [ShowIf(nameof(useFadeEffect))]
         public float fadeUpDuration = 0.25f;
 
+        /// <summary>
+        /// How long should the fade down last?
+        /// </summary>
         [Group("Fade")]
         [ShowIf(nameof(useFadeEffect))]
         public float fadeDownDuration = 0.1f;
@@ -83,7 +92,7 @@ namespace Yarn.Unity
         /// when dialogue is complete.
         /// </summary>
         /// <returns>A completed task.</returns>
-        public override YarnTask OnDialogueCompleteAsync()
+        public override YarnTask OnDialogueCompleteAsync(CancellationToken token)
         {
             if (canvasGroup != null)
             {
@@ -122,7 +131,7 @@ namespace Yarn.Unity
         /// when dialogue begins.
         /// </summary>
         /// <returns>A completed task.</returns>
-        public override YarnTask OnDialogueStartedAsync()
+        public override YarnTask OnDialogueStartedAsync(CancellationToken token)
         {
             if (canvasGroup != null)
             {
@@ -366,7 +375,10 @@ namespace Yarn.Unity
             // disabling ALL the options views now
             foreach (var optionView in optionViews)
             {
-                optionView.gameObject.SetActive(false);
+                if (optionView != null)
+                {
+                    optionView.gameObject.SetActive(false);
+                }
             }
             await YarnTask.Yield();
 
@@ -396,11 +408,6 @@ namespace Yarn.Unity
             optionView.gameObject.SetActive(false);
 
             return optionView;
-        }
-
-        public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
-        {
-            // Empty body
         }
     }
 }

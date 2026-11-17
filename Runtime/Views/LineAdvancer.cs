@@ -23,20 +23,20 @@ namespace Yarn.Unity
 
     /// <summary>
     /// A dialogue presenter that listens for user input and sends requests to a <see
-    /// cref="DialogueRunner"/> to advance the presentation of the current line,
+    /// cref="DialogueRunner"/> to advance the presentation of the current content,
     /// either by asking a dialogue runner to hurry up its delivery, advance to
-    /// the next line, or cancel the entire dialogue session.
+    /// the next piece of content, or cancel the entire dialogue session.
     /// </summary>
     public sealed partial class LineAdvancer : DialoguePresenterBase, IActionMarkupHandler
     {
-        [MustNotBeNull("Line Advancer needs to know which Dialogue Runner should be told to tell it to show the next line.")]
-        [Tooltip("The dialogue runner that will receive requests to advance or cancel content.")]
+        [MustNotBeNull("Line Advancer needs to know which Dialogue Runner should be told to tell it to show the next piece of content.")]
+        [Tooltip("The dialogue runner that will receive requests to hurry up, advance, or cancel content.")]
         [SerializeField] DialogueRunner? runner;
 
         /// <summary>
         /// The <see cref="DialoguePresenterBase"/> that this LineAdvancer should subscribe to for notifications that the line is fully visible.
         /// </summary>
-        /// <remarks>When <see cref="RequestLineHurryUp"/> is called, if the line is fully visible, the <see cref="runner"/> object will have its <see cref="DialogueRunner.RequestNextLine"/> method called (instead of its <see cref="DialogueRunner.RequestHurryUpLine"/> method).
+        /// <remarks>When <see cref="RequestHurryUpContent"/> is called, if the line is fully visible, the <see cref="runner"/> object will have its <see cref="DialogueRunner.RequestNextContent"/> method called (instead of its <see cref="DialogueRunner.RequestHurryUpContent"/> method).
         /// This behaviour is only the case when the <see cref="separateHurryUpAndAdvanceControls"/> is set to false.
         ///</remarks>
         public DialoguePresenterBase? presenter 
@@ -53,48 +53,15 @@ namespace Yarn.Unity
         [SerializeField] DialoguePresenterBase? _presenter;
 
         /// <summary>
-        /// Should this line advancer use different actions for hurrying up a line and advancing a line?
+        /// Should this line advancer use different actions for hurrying up and advancing content?
         /// </summary>
         /// <remarks>
-        /// When this is false if the player requests a line to hurry up and the line is fully shown the <see cref="DialogueRunner.RequestNextLine"/> method will be called instead of the <see cref="DialogueRunner.RequestHurryUpLine"/> method.
-        /// This behaviour is only the case when <see cref="presenter"/> is not null and the presenter is presenting it's line content via it's <see cref="DialoguePresenter.Typewriter"/> property.
+        /// When this is false if the player requests content to hurry up and the content is fully shown the <see cref="DialogueRunner.RequestNextContent"/> method will be called instead of the <see cref="DialogueRunner.RequestHurryUpContent"/> method.
+        /// This behaviour is only the case when <see cref="presenter"/> is not null and the presenter is presenting it's content via it's <see cref="DialoguePresenterBase.Typewriter"/> property.
         /// </remarks>
         [SerializeField] private bool separateHurryUpAndAdvanceControls = false;
 
         public bool SeparateHurryUpAndAdvanceControls => separateHurryUpAndAdvanceControls;
-
-        /// <summary>
-        /// If <see langword="true"/>, repeatedly signalling that the line
-        /// should be hurried up will cause the line advancer to request that
-        /// the next line be shown.
-        /// </summary>
-        /// <seealso cref="advanceRequestsBeforeCancellingLine"/>
-        [Space]
-        [Tooltip("Does repeatedly requesting a line advance cancel the line?")]
-        public bool multiAdvanceIsCancel = false;
-
-        /// <summary>
-        /// The number of times that a 'hurry up' signal occurs before the line
-        /// advancer requests that the next line be shown.
-        /// </summary>
-        /// <seealso cref="multiAdvanceIsCancel"/>
-        [ShowIf(nameof(multiAdvanceIsCancel))]
-        [Indent]
-        [Label("Advance Count")]
-        [Tooltip("The number of times that a line advance occurs before the current line is cancelled.")]
-        public int advanceRequestsBeforeCancellingLine = 2;
-
-        /// <summary>
-        /// The number of times that this object has received an indication that
-        /// the line should be advanced.
-        /// </summary>
-        /// <remarks>
-        /// This value is reset to zero when a new line is run. When the line is
-        /// advanced, this value is incremented. If this value ever meets or
-        /// exceeds <see cref="advanceRequestsBeforeCancellingLine"/>, the line
-        /// will be cancelled.
-        /// </remarks>
-        private int numberOfAdvancesThisLine = 0;
 
         /// <summary>
         /// The type of input that this line advancer responds to.
@@ -116,7 +83,7 @@ namespace Yarn.Unity
             /// </summary>
             /// <remarks>When a line advancer's <see cref="UsedInputMode"/> is set
             /// to <see cref="None"/>, call the <see
-            /// cref="RequestLineHurryUp"/>, <see cref="RequestNextLine"/> and
+            /// cref="RequestHurryUpContent"/>, <see cref="RequestNextContent"/> and
             /// <see cref="RequestDialogueCancellation"/> methods directly from
             /// your code to control line advancement.</remarks>
             [InspectorName("Manual")] None,
@@ -154,9 +121,8 @@ namespace Yarn.Unity
             if (this.inputMode == InputMode.None)
             {
                 return MessageBoxAttribute.Info($"To use this component, call the following methods on it:\n\n" +
-                    $"- {nameof(this.RequestLineHurryUp)}()\n" +
-                    $"- {nameof(this.RequestNextLine)}()\n" +
-                    $"- {nameof(this.RequestOptionHurryUp)}()\n" +
+                    $"- {nameof(this.RequestHurryUpContent)}()\n" +
+                    $"- {nameof(this.RequestNextContent)}()\n" +
                     $"- {nameof(this.RequestDialogueCancellation)}()"
                 );
             }
@@ -201,7 +167,7 @@ namespace Yarn.Unity
         // as people replace those defaults with more complex views and presenters they will also want to replace the line advancer anyways
         public enum PresentationStatus
         {
-            Unknown, LineBegan, LineWaiting, OptionsBegan, OptionsWaiting,
+            Unknown, LineBegan, LineWaiting, OptionsBegan, OptionsWaiting, CommandBegan,
         }
         public PresentationStatus Status { get; private set; } = PresentationStatus.Unknown;
 
@@ -212,18 +178,27 @@ namespace Yarn.Unity
             // fully visible. This is so that when a line is fully visible, the
             // 'hurry up' action will instead trigger a 'next line' action,
             // (because there's nothing left to hurry up.)
-            if (runner == null || presenter == null)
+            if (runner == null)
             {
+                Debug.LogError("Line Advancer has been added to scene but has no dialogue runner associated with it. This will not advance your dialogue.");
                 return;
             }
             if (!separateHurryUpAndAdvanceControls)
             {
+                // we register ourselves as being a temporal processor for all presenters
+                foreach (var presenter in runner.DialoguePresenters)
+                {
+                    if (presenter != null)
+                    {
+                        presenter.Typewriter?.ActionMarkupHandlers.Add(this);
+                    }
+                }
+                // and then add ourselves to that list of presenters also so we can get the higher level messages too
                 var listOfPresenters = new List<DialoguePresenterBase?>(runner.DialoguePresenters)
                 {
                     this
                 };
                 runner.DialoguePresenters = listOfPresenters;
-                presenter.Typewriter?.ActionMarkupHandlers.Add(this);
             }
         }
 
@@ -394,13 +369,12 @@ namespace Yarn.Unity
         /// handlers for advancing the line.
         /// </summary>
         /// <returns>A completed task.</returns>
-        public override YarnTask OnDialogueStartedAsync()
+        public override YarnTask OnDialogueStartedAsync(CancellationToken token)
         {
             if (TryGetComponent<ILineAdvancerInput>(out var input))
             {
                 input.OnDialogueStarted();
             }
-            ResetLineTracking();
             return YarnTask.CompletedTask;
         }
 
@@ -409,13 +383,12 @@ namespace Yarn.Unity
         /// action handlers.
         /// </summary>
         /// <returns>A completed task.</returns>
-        public override YarnTask OnDialogueCompleteAsync()
+        public override YarnTask OnDialogueCompleteAsync(CancellationToken token)
         {
             if (TryGetComponent<ILineAdvancerInput>(out var input))
             {
                 input.OnDialogueComplete();
             }
-            ResetLineTracking();
             return YarnTask.CompletedTask;
         }
 
@@ -426,9 +399,6 @@ namespace Yarn.Unity
         /// <returns>A completed task.</returns>
         public override YarnTask RunLineAsync(LocalizedLine line, LineCancellationToken token)
         {
-            // A new line has come in, so reset the number of times we've seen a
-            // request to skip.
-            ResetLineTracking();
             Status = PresentationStatus.LineBegan;
 
             frameContentReceived = Time.frameCount;
@@ -444,7 +414,6 @@ namespace Yarn.Unity
         /// this view.</returns>
         public override YarnTask<DialogueOption?> RunOptionsAsync(DialogueOption[] dialogueOptions, LineCancellationToken cancellationToken)
         {
-            ResetLineTracking();
             Status = PresentationStatus.OptionsBegan;
 
             frameContentReceived = Time.frameCount;
@@ -452,158 +421,95 @@ namespace Yarn.Unity
             return DialogueRunner.NoOptionSelected;
         }
 
-        private void ResetLineTracking()
+        public override YarnTask RunCommand(Command command, LineCancellationToken cancellationToken)
         {
-            numberOfAdvancesThisLine = 0;
-            Status = PresentationStatus.Unknown;
+            Status = PresentationStatus.CommandBegan;
+            return YarnTask.CompletedTask;
         }
 
-
-        private void RequestLineHurryUpInternal()
-        {
-            if (frameContentReceived == Time.frameCount)
-            {
-                return;
-            }
-
-            // in this mode we NEED to be in a state where a line showing, regardless of it's completion state
-            if (!separateHurryUpAndAdvanceControls)
-            {
-                if (!(Status == PresentationStatus.LineBegan || Status == PresentationStatus.LineWaiting))
-                {
-                    return;
-                }
-            }
-
-            // Increment our counter of line advancements, and depending on the
-            // new count, request that the runner 'soft-cancel' the line or
-            // cancel the entire line
-            // this is true regardless of if we are the hurry up mode or not
-
-            numberOfAdvancesThisLine += 1;
-
-            if (multiAdvanceIsCancel && numberOfAdvancesThisLine >= advanceRequestsBeforeCancellingLine)
-            {
-                RequestNextLine();
-            }
-            else
-            {
-                // at this stage we want to hurry up if we are in multiAdvanceIsCancel
-                // and either hurry up or skip the line depending on the state 
-                if (separateHurryUpAndAdvanceControls)
-                {
-                    if (runner != null)
-                    {
-                        runner.RequestHurryUpLine();
-                    }
-                    else
-                    {
-                        Debug.LogError($"{nameof(LineAdvancer)} dialogue runner is null", this);
-                    }
-                }
-                else
-                {
-                    if (Status == PresentationStatus.LineWaiting)
-                    {
-                        RequestNextLine();
-                    }
-                    else
-                    {
-                        if (runner != null)
-                        {
-                            runner.RequestHurryUpLine();
-                        }
-                        else
-                        {
-                            Debug.LogError($"{nameof(LineAdvancer)} dialogue runner is null", this);
-                        }
-                    }
-                }
-            }
-        }
         /// <summary>
-        /// Requests that the line be hurried up.
+        /// Requests that the dialogue runner hurrys up the current piece of content.
         /// </summary>
-        /// <remarks>If this method has been called more times for a single line
-        /// than <see cref="numberOfAdvancesThisLine"/>, this method requests
-        /// that the dialogue runner proceed to the next line. Otherwise, it
-        /// requests that the dialogue runner instruct all line views to hurry
-        /// up their presentation of the current line.
-        /// </remarks>
-        public void RequestLineHurryUp()
+        public void RequestHurryUpContent()
         {
-            // Increment our counter of line advancements, and depending on the
-            // new count, request that the runner 'soft-cancel' the line or
-            // cancel the entire line
-
-            numberOfAdvancesThisLine += 1;
-
-            if (multiAdvanceIsCancel && numberOfAdvancesThisLine >= advanceRequestsBeforeCancellingLine)
-            {
-                RequestNextLine();
-            }
-            else
-            {
-                if (runner != null)
-                {
-                    runner.RequestHurryUpLine();
-                }
-                else
-                {
-                    Debug.LogError($"{nameof(LineAdvancer)} dialogue runner is null", this);
-                }
-            }
-        }
-
-        public void RequestOptionHurryUp()
-        {
-            if (frameContentReceived == Time.frameCount)
-            {
-                return;
-            }
-
             if (runner == null)
             {
-                Debug.LogError($"Unable to hurry up options, {nameof(LineAdvancer)} dialogue runner is null", this);
+                Debug.LogError($"{nameof(LineAdvancer)} dialogue runner is null", this);
                 return;
             }
 
-            if (!separateHurryUpAndAdvanceControls)
+            // if this came in the same frame we got the content we ignore this
+            if (frameContentReceived == Time.frameCount)
             {
-                if (Status == PresentationStatus.OptionsBegan || Status == PresentationStatus.OptionsWaiting)
-                {
-                    runner.RequestHurryUpOption();
-                }
+                return;
             }
-            else
+
+            // we have separate controls for both hurrying up and skipping content
+            // this is the easiest case, we just call hurry up
+            if (separateHurryUpAndAdvanceControls)
             {
-                runner.RequestHurryUpOption();
+                runner.RequestHurryUpContent();
+                return;
+            }
+
+            // we are in the shared mode
+            // which means what we do now needs to change depending on what the type of content it is
+            switch (Status)
+            {
+                // we are unknown, this means the user likely clicked the wrong thing, ignoring this
+                case PresentationStatus.Unknown:
+                    return;
+
+                // the line has started but not yet finished showing
+                // this means we want to tell it to hurry up showing
+                case PresentationStatus.LineBegan:
+                    runner.RequestHurryUpContent();
+                    return;
+
+                // the line has finished showing and is waiting input to advance
+                case PresentationStatus.LineWaiting:
+                    RequestNextContent();
+                    return;
+
+                // the option has started showing, so we will request it hurry up
+                // next time this occurs it will force skipping the options
+                // this is because most of the time option selection will use the same key as hurry up
+                // which means if we just straight up skipped we'd never be able to select an option
+                case PresentationStatus.OptionsBegan:
+                    runner.RequestHurryUpContent();
+                    Status = PresentationStatus.OptionsWaiting;
+                    return;
+
+                // we're now either a command and can't really know when we're finished
+                // or we're an already presented option
+                // either way we just want the next piece of content please
+                default:
+                    RequestNextContent();
+                    return;
             }
         }
-
         /// <summary>
-        /// Requests that the dialogue runner proceeds to the next line.
+        /// Requests that the dialogue runner proceeds to the next piece of content.
         /// </summary>
-        public void RequestNextLine()
+        public void RequestNextContent()
         {
-            ResetLineTracking();
+            Status = PresentationStatus.Unknown;
             if (runner != null)
             {
-                runner.RequestNextLine();
+                runner.RequestNextContent();
             }
             else
             {
                 Debug.LogError($"{nameof(LineAdvancer)} dialogue runner is null", this);
             }
         }
-
         /// <summary>
         /// Requests that the dialogue runner to instruct all line views to
         /// dismiss their content, and then stops the dialogue.
         /// </summary>
         public void RequestDialogueCancellation()
         {
-            ResetLineTracking();
+            Status = PresentationStatus.Unknown;
             // Stop the dialogue runner, which will cancel the current line as
             // well as the entire dialogue.
             if (runner != null)
@@ -612,30 +518,46 @@ namespace Yarn.Unity
             }
         }
 
-        /// <summary>
-        /// Called by Unity every frame to check to see if, depending on <see
-        /// cref="UsedInputMode"/>, the <see cref="LineAdvancer"/> should take
-        /// action.
-        /// </summary>
-        private void Update()
+        [System.Obsolete("Changes to the dialogue runner mean there is no longer a difference between hurrying up lines and any other content. Please use RequestHurryUpContent instead")]
+        public void RequestLineHurryUp()
         {
+            RequestHurryUpContent();
         }
 
+        [System.Obsolete("Changes to the dialogue runner mean there is no longer a difference between hurrying up options and any other content. Please use RequestHurryUpContent instead")]
+        public void RequestOptionHurryUp()
+        {
+            RequestHurryUpContent();
+        }
+
+        /// <summary>
+        /// Requests that the dialogue runner proceeds to the next line.
+        /// </summary>
+        [System.Obsolete("Changes to the dialogue runner mean there is no longer a difference between skipping lines and any other content. Please use RequestNextContent instead")]
+        public void RequestNextLine()
+        {
+            RequestNextContent();
+        }
+
+        /// <inheritdoc>
         public void OnPrepareForLine(MarkupParseResult line, TMP_Text text)
         {
             return;
         }
 
+        /// <inheritdoc>
         public void OnLineDisplayBegin(MarkupParseResult line, TMP_Text text)
         {
             return;
         }
 
+        /// <inheritdoc>
         public YarnTask OnCharacterWillAppear(int currentCharacterIndex, MarkupParseResult line, CancellationToken cancellationToken)
         {
             return YarnTask.CompletedTask;
         }
 
+        /// <inheritdoc>
         public void OnLineDisplayComplete()
         {
             if (Status == PresentationStatus.LineBegan)
@@ -648,15 +570,11 @@ namespace Yarn.Unity
             }
         }
 
+        /// <inheritdoc>
         public void OnLineWillDismiss()
         {
             return;
         }
-
-        public void OnInputHurryUpLines() => RequestLineHurryUpInternal();
-        public void OnInputNextContent() => RequestNextLine();
-        public void OnInputHurryUpOptions() => RequestOptionHurryUp();
-        public void OnInputCancelDialogue() => RequestDialogueCancellation();
 
         public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
         {
@@ -670,6 +588,7 @@ namespace Yarn.Unity
             }
         }
     }
+
     public interface ILineAdvancerInput
     {
         public LineAdvancer? LineAdvancer { get; set; }

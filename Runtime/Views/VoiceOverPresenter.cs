@@ -3,8 +3,9 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 */
 
 using System;
-using System.Collections.Generic;
+using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Threading;
 using UnityEngine;
 using Yarn.Unity.Attributes;
 
@@ -109,19 +110,19 @@ namespace Yarn.Unity
                 voiceOverClip = result;
             }
 
-            IRequestLineCancellation? requestLineCancellationHandler = dialogueLine.Source as IRequestLineCancellation;
+            DialogueRunner? dialogueRunner = dialogueLine.Source as DialogueRunner;
 
             if (voiceOverClip == null)
             {
                 Debug.LogError($"Playing voice over failed because the localised line {dialogueLine.TextID} " +
                     $"either didn't have an asset, or its asset was not an {nameof(AudioClip)}.", gameObject);
 
-                if (this.endLineWhenVoiceoverComplete && requestLineCancellationHandler != null)
+                if (this.endLineWhenVoiceoverComplete && dialogueRunner != null)
                 {
                     // If we didn't get a line, but we were configured to
                     // advance the line on end, then we should act as though
                     // we've reached the end of the line now and advance.
-                    requestLineCancellationHandler.RequestLineCancellation(dialogueLine);
+                    dialogueRunner.RequestNextContent();
                 }
                 return;
             }
@@ -218,13 +219,13 @@ namespace Yarn.Unity
 
             if (endLineWhenVoiceoverComplete)
             {
-                if (requestLineCancellationHandler == null)
+                if (dialogueRunner == null)
                 {
-                    Debug.LogError($"Can't end line due to voice over being complete: {nameof(requestLineCancellationHandler)} is null", this);
+                    Debug.LogError($"Can't end line due to voice over being complete: {nameof(dialogueRunner)} is null", this);
                 }
                 else
                 {
-                    requestLineCancellationHandler.RequestLineCancellation(dialogueLine);
+                    dialogueRunner.RequestNextContent();
                 }
             }
         }
@@ -233,7 +234,7 @@ namespace Yarn.Unity
         /// <remarks>
         /// Stops any audio if there is still any playing.
         /// </remarks>
-        public override YarnTask OnDialogueCompleteAsync()
+        public override YarnTask OnDialogueCompleteAsync(CancellationToken token)
         {
             // just in case we are still playing audio we want it to stop
             audioSource.Stop();
@@ -242,14 +243,9 @@ namespace Yarn.Unity
         }
 
         /// <inheritdoc/>
-        public override YarnTask OnDialogueStartedAsync()
+        public override YarnTask OnDialogueStartedAsync(CancellationToken token)
         {
             return YarnTask.CompletedTask;
-        }
-
-        public override void RegisterPresenterDependencies(List<DialoguePresenterBase?> presenters)
-        {
-            // Empty body
         }
     }
 }

@@ -1,5 +1,6 @@
 /*
-Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
+Based upon https://github.com/azixMcAze/Unity-SerializableDictionary, available under the MIT license.
+Please see the linked repository for more details.
 */
 
 using System;
@@ -8,10 +9,17 @@ using System.Collections.Generic;
 using System.Runtime.Serialization;
 using UnityEngine;
 
+#if UNITY_6000_6_OR_NEWER
+using Unity.Scripting.LifecycleManagement;
+#else
+using Yarn.Unity.Shim;
+#endif
+
 #nullable enable
 
 namespace Yarn.Unity
 {
+    [Serializable]
     public abstract class SerializableDictionaryBase
     {
         public abstract class Storage { }
@@ -271,15 +279,15 @@ namespace Yarn.Unity
 #if UNITY_EDITOR
 namespace Yarn.Unity.Editor
 {
-
     using System;
     using System.Collections.Generic;
     using System.Reflection;
     using UnityEditor;
     using UnityEngine;
 
+    [AutoStaticsCleanup]
     [CustomPropertyDrawer(typeof(SerializableDictionaryBase), true)]
-    public class SerializableDictionaryPropertyDrawer : PropertyDrawer
+    public partial class SerializableDictionaryPropertyDrawer : PropertyDrawer
     {
         const string KeysFieldName = "m_keys";
         const string ValuesFieldName = "m_values";
@@ -658,38 +666,46 @@ namespace Yarn.Unity.Editor
             return conflictState;
         }
 
-        static Dictionary<SerializedPropertyType, PropertyInfo> s_serializedPropertyValueAccessorsDict;
-
-        static SerializableDictionaryPropertyDrawer()
+        
+        static Dictionary<SerializedPropertyType, PropertyInfo>? inner = null;
+        static Dictionary<SerializedPropertyType, PropertyInfo> s_serializedPropertyValueAccessorsDict
         {
-            Dictionary<SerializedPropertyType, string> serializedPropertyValueAccessorsNameDict = new Dictionary<SerializedPropertyType, string>() {
-            { SerializedPropertyType.Integer, "intValue" },
-            { SerializedPropertyType.Boolean, "boolValue" },
-            { SerializedPropertyType.Float, "floatValue" },
-            { SerializedPropertyType.String, "stringValue" },
-            { SerializedPropertyType.Color, "colorValue" },
-            { SerializedPropertyType.ObjectReference, "objectReferenceValue" },
-            { SerializedPropertyType.LayerMask, "intValue" },
-            { SerializedPropertyType.Enum, "intValue" },
-            { SerializedPropertyType.Vector2, "vector2Value" },
-            { SerializedPropertyType.Vector3, "vector3Value" },
-            { SerializedPropertyType.Vector4, "vector4Value" },
-            { SerializedPropertyType.Rect, "rectValue" },
-            { SerializedPropertyType.ArraySize, "intValue" },
-            { SerializedPropertyType.Character, "intValue" },
-            { SerializedPropertyType.AnimationCurve, "animationCurveValue" },
-            { SerializedPropertyType.Bounds, "boundsValue" },
-            { SerializedPropertyType.Quaternion, "quaternionValue" },
-        };
-            Type serializedPropertyType = typeof(SerializedProperty);
-
-            s_serializedPropertyValueAccessorsDict = new Dictionary<SerializedPropertyType, PropertyInfo>();
-            BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
-
-            foreach (var kvp in serializedPropertyValueAccessorsNameDict)
+            get
             {
-                PropertyInfo propertyInfo = serializedPropertyType.GetProperty(kvp.Value, flags);
-                s_serializedPropertyValueAccessorsDict.Add(kvp.Key, propertyInfo);
+                if (inner == null)
+                {
+                    Dictionary<SerializedPropertyType, string> serializedPropertyValueAccessorsNameDict = new Dictionary<SerializedPropertyType, string>()
+                    {
+                        { SerializedPropertyType.Integer, "intValue" },
+                        { SerializedPropertyType.Boolean, "boolValue" },
+                        { SerializedPropertyType.Float, "floatValue" },
+                        { SerializedPropertyType.String, "stringValue" },
+                        { SerializedPropertyType.Color, "colorValue" },
+                        { SerializedPropertyType.ObjectReference, "objectReferenceValue" },
+                        { SerializedPropertyType.LayerMask, "intValue" },
+                        { SerializedPropertyType.Enum, "intValue" },
+                        { SerializedPropertyType.Vector2, "vector2Value" },
+                        { SerializedPropertyType.Vector3, "vector3Value" },
+                        { SerializedPropertyType.Vector4, "vector4Value" },
+                        { SerializedPropertyType.Rect, "rectValue" },
+                        { SerializedPropertyType.ArraySize, "intValue" },
+                        { SerializedPropertyType.Character, "intValue" },
+                        { SerializedPropertyType.AnimationCurve, "animationCurveValue" },
+                        { SerializedPropertyType.Bounds, "boundsValue" },
+                        { SerializedPropertyType.Quaternion, "quaternionValue" },
+                    };
+                    Type serializedPropertyType = typeof(SerializedProperty);
+
+                    inner = new();
+                    BindingFlags flags = BindingFlags.Instance | BindingFlags.Public;
+
+                    foreach (var kvp in serializedPropertyValueAccessorsNameDict)
+                    {
+                        PropertyInfo propertyInfo = serializedPropertyType.GetProperty(kvp.Value, flags);
+                        inner.Add(kvp.Key, propertyInfo);
+                    }
+                }
+                return inner;
             }
         }
 

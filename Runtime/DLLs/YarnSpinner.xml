@@ -65,7 +65,7 @@
              They are created by the <see cref="T:Yarn.Dialogue"/> during program
              execution.</para>
              </remarks>
-             <seealso cref="P:Yarn.Dialogue.LineHandler"/>
+             <seealso cref="M:Yarn.IDialogueResponder.HandleLine(Yarn.Line,System.Threading.CancellationToken)"/>
         </member>
         <member name="M:Yarn.Line.#ctor(System.String,System.String[])">
             <summary>
@@ -96,7 +96,7 @@
             You typically do not create instances of this struct yourself. They are
             created by the <see cref="T:Yarn.Dialogue"/> during program execution.
             </remarks>
-            <seealso cref="P:Yarn.Dialogue.OptionsHandler"/>
+            <seealso cref="M:Yarn.IDialogueResponder.HandleOptions(Yarn.OptionSet,System.Threading.CancellationToken)"/>
         </member>
         <member name="T:Yarn.OptionSet.Option">
             <summary>
@@ -119,19 +119,7 @@
             Gets the identifying number for this option.
             </summary>
             <remarks>
-            When the user selects this option, this value should be
-            used as the parameter for <see
-            cref="M:Yarn.Dialogue.SetSelectedOption(System.Int32)"/>.
-            </remarks>
-        </member>
-        <member name="P:Yarn.OptionSet.Option.DestinationInstruction">
-            <summary>
-            Gets the name of the node that will be run if this option
-            is selected.
-            </summary>
-            <remarks>
-            The value of this property not be valid if this is a
-            shortcut option.
+            You should not rely on this value being the same as the index of the option inside the <see cref="T:Yarn.OptionSet"/>
             </remarks>
         </member>
         <member name="P:Yarn.OptionSet.Option.IsAvailable">
@@ -170,7 +158,7 @@
             You do not create instances of this struct yourself. They are
             created by the <see cref="T:Yarn.Dialogue"/> during program execution.
             </remarks>
-            <seealso cref="P:Yarn.Dialogue.CommandHandler"/>    
+            <seealso cref="M:Yarn.IDialogueResponder.HandleCommand(Yarn.Command,System.Threading.CancellationToken)"/>
         </member>
         <member name="P:Yarn.Command.Text">
             <summary>
@@ -325,686 +313,228 @@
         <member name="M:Yarn.MemoryVariableStore.GetVariableKind(System.String)">
             <inheritdoc/>
         </member>
-        <member name="T:Yarn.LineHandler">
-            <summary>
-            Represents the method that is called when the Dialogue delivers a <see
-            cref="T:Yarn.Line"/>.
-            </summary>
-            <param name="line">The <see cref="T:Yarn.Line"/> that has been
-            delivered.</param>
-            <seealso cref="T:Yarn.OptionsHandler"/>
-            <seealso cref="T:Yarn.CommandHandler"/>
-            <seealso cref="T:Yarn.NodeStartHandler"/>
-            <seealso cref="T:Yarn.NodeCompleteHandler"/>
-            <seealso cref="T:Yarn.DialogueCompleteHandler"/>
-        </member>
-        <member name="T:Yarn.OptionsHandler">
-            <summary>
-            Represents the method that is called when the Dialogue delivers an <see
-            cref="T:Yarn.OptionSet"/>.
-            </summary>
-            <param name="options">The <see cref="T:Yarn.OptionSet"/> that has been
-            delivered.</param>
-            <seealso cref="T:Yarn.LineHandler"/>
-            <seealso cref="T:Yarn.CommandHandler"/>
-            <seealso cref="T:Yarn.NodeStartHandler"/>
-            <seealso cref="T:Yarn.NodeCompleteHandler"/>
-            <seealso cref="T:Yarn.DialogueCompleteHandler"/>
-        </member>
-        <member name="T:Yarn.CommandHandler">
-            <summary>
-            Represents the method that is called when the Dialogue delivers a <see
-            cref="T:Yarn.Command"/>.
-            </summary>
-            <param name="command">The <see cref="T:Yarn.Command"/> that has been
-            delivered.</param>
-            <seealso cref="T:Yarn.LineHandler"/>
-            <seealso cref="T:Yarn.OptionsHandler"/>
-            <seealso cref="T:Yarn.NodeStartHandler"/>
-            <seealso cref="T:Yarn.NodeCompleteHandler"/>
-            <seealso cref="T:Yarn.DialogueCompleteHandler"/>
-        </member>
-        <member name="T:Yarn.NodeCompleteHandler">
-            <summary>
-            Represents the method that is called when the Dialogue reaches the end
-            of a node.
-            </summary>
-            <param name="completedNodeName">The name of the node.</param>
-            <remarks>
-            This method may be called multiple times over the course of code
-            execution. A node being complete does not necessarily represent the end
-            of the conversation.
-            </remarks>
-            <seealso cref="T:Yarn.LineHandler"/>
-            <seealso cref="T:Yarn.OptionsHandler"/>
-            <seealso cref="T:Yarn.CommandHandler"/>
-            <seealso cref="T:Yarn.NodeStartHandler"/>
-            <seealso cref="T:Yarn.DialogueCompleteHandler"/>
-        </member>
-        <member name="T:Yarn.NodeStartHandler">
-            <summary>
-            Represents the method that is called when the Dialogue begins executing
-            a node.
-            </summary>
-            <param name="startedNodeName">The name of the node.</param>
-            <seealso cref="T:Yarn.LineHandler"/>
-            <seealso cref="T:Yarn.OptionsHandler"/>
-            <seealso cref="T:Yarn.CommandHandler"/>
-            <seealso cref="T:Yarn.NodeCompleteHandler"/>
-            <seealso cref="T:Yarn.DialogueCompleteHandler"/>
-        </member>
-        <member name="T:Yarn.DialogueCompleteHandler">
-            <summary>
-            Represents the method that is called when the dialogue has reached its
-            end, and no more code remains to be run.
-            </summary>
-            <seealso cref="T:Yarn.LineHandler"/>
-            <seealso cref="T:Yarn.OptionsHandler"/>
-            <seealso cref="T:Yarn.CommandHandler"/>
-            <seealso cref="T:Yarn.NodeStartHandler"/>
-            <seealso cref="T:Yarn.NodeCompleteHandler"/>
-        </member>
-        <member name="T:Yarn.PrepareForLinesHandler">
-            <summary>
-            Represents the method that is called when the dialogue anticipates that
-            it will deliver lines.
-            </summary>
-            <remarks>
-            <para>
-            This method should begin preparing to run the lines. For example, if a
-            game delivers dialogue via voice-over, the appropriate audio files
-            should be loaded.
-            </para>
-            <para>
-            This method serves to provide a hint to the game that a line _may_ be
-            run. Not every line indicated in <paramref name="lineIDs"/> may end up
-            actually running.
-            </para>
-            <para>
-            This method may be called any number of times during a dialogue session.
-            </para>
-            </remarks>
-            <param name="lineIDs">The collection of line IDs that may be delivered
-            at some point soon.</param>
-        </member>
         <member name="T:Yarn.Dialogue">
             <summary>
             Co-ordinates the execution of Yarn programs.
             </summary>
+            <remarks>
+            This type is basically a wrapper around the <see cref="T:Yarn.VirtualMachine"/> and provides a nicer interface into manipulating the vm from the perspective of dialogue instead of a stack machine.
+            </remarks>
         </member>
-        <member name="P:Yarn.Dialogue.VariableStorage">
+        <member name="M:Yarn.Dialogue.#ctor(Yarn.IVariableStorage)">
             <summary>
-            Gets or sets the object that provides access to storing and
-            retrieving the values of variables.
+            Creates a new AsyncDialogue
             </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.LogDebugMessage">
-            <summary>
-            Invoked when the Dialogue needs to report debugging
-            information.
-            </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.LogErrorMessage">
-            <summary>
-            Invoked when the Dialogue needs to report an error.
-            </summary>
-        </member>
-        <member name="F:Yarn.Dialogue.DefaultStartNodeName">
-            <summary>The default name of the node that execution will start
-            from.</summary>
+            <param name="variableStorage">The varstore for this dialogue</param>
+            <exception cref="T:System.ArgumentNullException">If the variable storage is null there is no way to create an a dialogue object</exception>
         </member>
         <member name="F:Yarn.Dialogue.NoOptionSelected">
             <summary>
             The value to indicate to the dialogue runner that no option was selected and dialogue should fall through to the rest of the program.
             </summary>
         </member>
+        <member name="P:Yarn.Dialogue.LogDebugMessage">
+            <summary>
+            The logger for debug messages, is forwarded to the VM
+            </summary>
+        </member>
+        <member name="P:Yarn.Dialogue.LogErrorMessage">
+            <summary>
+            The logger for error messages, is forwarded to the VM
+            </summary>
+        </member>
+        <member name="P:Yarn.Dialogue.VariableStorage">
+            <summary>
+            The variable storage used by the dialogue
+            </summary>
+        </member>
+        <member name="P:Yarn.Dialogue.Responder">
+            <summary>
+            The Responder for this dialogue, this is how the dialogue informs the rest of the system of important events
+            </summary>
+        </member>
         <member name="P:Yarn.Dialogue.Program">
-            <summary>Gets or sets the compiled Yarn program.</summary>
-        </member>
-        <member name="P:Yarn.Dialogue.IsActive">
             <summary>
-            Gets a value indicating whether the Dialogue is currently executing
-            Yarn instructions.
+            The compiled Yarn program used by the dialogue.
             </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.LineHandler">
-            <summary>
-            Gets or sets the <see cref="T:Yarn.LineHandler"/> that is called when
-            a line is ready to be shown to the user.
-            </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.OptionsHandler">
-            <summary>
-            Gets or sets the <see cref="T:Yarn.OptionsHandler"/> that is called
-            when a set of options are ready to be shown to the user.
-            </summary>
-            <remarks>
-            The Options Handler delivers an <see cref="T:Yarn.OptionSet"/> to the game.
-            Before <see cref="M:Yarn.Dialogue.Continue"/> can be called to resume execution,
-            <see cref="M:Yarn.Dialogue.SetSelectedOption(System.Int32)"/> must be called to indicate which
-            <see cref="T:Yarn.OptionSet.Option"/> was selected by the user. If <see
-            cref="M:Yarn.Dialogue.SetSelectedOption(System.Int32)"/> is not called, an exception is thrown.
-            </remarks>
-        </member>
-        <member name="P:Yarn.Dialogue.CommandHandler">
-            <summary>
-            Gets or sets the <see cref="T:Yarn.CommandHandler"/> that is called
-            when a command is to be delivered to the game.
-            </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.NodeStartHandler">
-            <summary>
-            Gets or sets the <see cref="T:Yarn.NodeStartHandler"/> that is called
-            when a node is started.
-            </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.NodeCompleteHandler">
-            <summary>
-            Gets or sets the <see cref="T:Yarn.NodeCompleteHandler"/> that is
-            called when a node is complete.
-            </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.DialogueCompleteHandler">
-            <summary>
-            Gets or sets the <see cref="T:Yarn.DialogueCompleteHandler"/> that is
-            called when the dialogue reaches its end.
-            </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.PrepareForLinesHandler">
-            <summary>
-            Gets or sets the <see cref="P:Yarn.Dialogue.PrepareForLinesHandler"/> that is called
-            when the dialogue anticipates delivering some lines.
-            </summary>
-            <value></value>
-        </member>
-        <member name="F:Yarn.Dialogue.vm">
-            <summary>
-            The virtual machine to use when running dialogue.
-            </summary>
-        </member>
-        <member name="F:Yarn.Dialogue.smartVariableVM">
-            <summary>
-            The virtual machine to use when evaluating smart variables.
-            </summary>
-            <remarks>
-            This is kept separate from the main VM in order to prevent
-            evaluating smart variables from modifying the evaluation state of
-            dialogue.
-            </remarks>
-        </member>
-        <member name="P:Yarn.Dialogue.Library">
-            <summary>
-            Gets the <see cref="T:Yarn.Library"/> that this Dialogue uses to
-            locate functions.
-            </summary>
-            <remarks>
-            When the Dialogue is constructed, the Library is initialized with
-            the built-in operators like <c>+</c>, <c>-</c>, and so on.
-            </remarks>
         </member>
         <member name="P:Yarn.Dialogue.ContentSaliencyStrategy">
             <summary>
-            Gets or sets the content saliency strategy used by this <see cref="T:Yarn.Dialogue"/>.
+            What saliency content strategy does the dialogue use to select salient content?
             </summary>
-            <remarks>
-            A content saliency strategy is a class that implements <see
-            cref="T:Yarn.Saliency.IContentSaliencyStrategy"/> and selects the most
-            appropriate content in a line group, or any other situation where
-            content saliency is relevant.
-            </remarks>
         </member>
-        <member name="M:Yarn.Dialogue.#ctor(Yarn.IVariableStorage)">
+        <member name="P:Yarn.Dialogue.IsActive">
             <summary>
-            Initializes a new instance of the <see cref="T:Yarn.Dialogue"/> class.
+            Is true when dialogue is currently running, false otherwise.
             </summary>
-            <param name="variableStorage">The <see
-            cref="T:Yarn.IVariableStorage"/> that this Dialogue should
-            use.</param>
         </member>
-        <member name="M:Yarn.Dialogue.SetProgram(Yarn.Program)">
+        <member name="M:Yarn.Dialogue.StartDialogue(System.String,System.Threading.CancellationToken)">
             <summary>
-            Loads all nodes from the provided <see cref="T:Yarn.Program"/>.
+            Starts dialogue from a specific entry node and will run until completion of dialogue.
             </summary>
-            <remarks>
-            This method replaces any existing nodes have been loaded.
-            </remarks>
-            <param name="program">The <see cref="T:Yarn.Program"/> to use.</param>
+            <param name="node">The node to use as the entry point for the dialogue</param>
+            <param name="cancellationToken">An optional external cancellation source for the dialogue operation.</param>
         </member>
-        <member name="M:Yarn.Dialogue.LoadProgram(System.String)">
+        <member name="M:Yarn.Dialogue.Start(System.Threading.CancellationToken)">
             <summary>
-            Loads a compiled <see cref="T:Yarn.Program"/> from a file.
+            Starts dialogue at the value of <see cref="P:Yarn.Dialogue.CurrentNode"/>.
             </summary>
-            <param name="fileName">The path of the file to load.</param>
-            <remarks>
-            <para>
-            This method replaces the current value of <see cref="P:Yarn.Dialogue.Program"/> with
-            the result of loading the file.
-            </para>
-            <para>
-            This method does not compile Yarn source. To compile Yarn source
-            code into a <see cref="T:Yarn.Program"/>, Refer to the Yarn compiler.
-            </para>
-            </remarks>
-        </member>
-        <member name="M:Yarn.Dialogue.SetNode(System.String)">
-            <summary>
-            Prepares the <see cref="T:Yarn.Dialogue"/> that the user intends to start
-            running a node.
-            </summary>
-            <param name="startNode">The name of the node that will be run. The
-            node have been loaded by calling <see
-            cref="M:Yarn.Dialogue.SetProgram(Yarn.Program)"/>.</param>
-            <remarks>
-            <para>
-            After this method is called, you call <see cref="M:Yarn.Dialogue.Continue"/> to
-            start executing it.
-            </para>
-            <para>
-            If <see cref="P:Yarn.Dialogue.PrepareForLinesHandler"/> has been set, it may be
-            called when this method is invoked, as the Dialogue determines which
-            lines may be delivered during the <paramref name="startNode"/>
-            node's execution.
-            </para>
-            </remarks>
-            <throws cref="T:Yarn.DialogueException">Thrown when no node named
-            <c>startNode</c> has been loaded.</throws>
-        </member>
-        <member name="M:Yarn.Dialogue.SetSelectedOption(System.Int32)">
-            <summary>
-            Signals to the <see cref="T:Yarn.Dialogue"/> that the user has selected a
-            specified <see cref="T:Yarn.OptionSet.Option"/>.
-            </summary>
-            <remarks>
-            <para>
-            After the Dialogue delivers an <see cref="T:Yarn.OptionSet"/>, this method
-            must be called before <see cref="M:Yarn.Dialogue.Continue"/> is called.
-            </para>
-            <para>
-            The ID number that should be passed as the parameter to this method
-            should be the <see cref="P:Yarn.OptionSet.Option.ID"/> field in the <see
-            cref="T:Yarn.OptionSet.Option"/> that represents the user's selection.
-            </para>
-            </remarks>
-            <param name="selectedOptionID">The ID number of the Option that the
-            user selected.</param>
-            <throws cref="T:Yarn.DialogueException">Thrown when the Dialogue is not
-            expecting an option to be selected.</throws> <throws
-            cref="T:System.ArgumentOutOfRangeException">Thrown when <c>selectedOptionID</c> is
-            not a valid option ID.</throws>
-            <seealso cref="T:Yarn.OptionsHandler"/>
-            <seealso cref="T:Yarn.OptionSet"/>
-            <seealso cref="M:Yarn.Dialogue.Continue"/>
-        </member>
-        <member name="M:Yarn.Dialogue.SignalContentComplete">
-            <summary>
-            Signals that the currently running content has completed synchronously.
-            </summary>
-            <remarks>
-            This method is not intended to be called by user code.
-            </remarks>
-        </member>
-        <member name="M:Yarn.Dialogue.Continue">
-             <summary>
-             Starts, or continues, execution of the current Program.
-             </summary>
-             <remarks>
-             <para>
-             This method repeatedly executes instructions until one of the
-             following conditions is encountered:
-             </para>
-             <list type="bullet">
-             <item>The <see cref="P:Yarn.Dialogue.LineHandler"/> or <see cref="P:Yarn.Dialogue.CommandHandler"/>
-             is called. After calling either of these handlers, the Dialogue will
-             wait until <see cref="M:Yarn.Dialogue.Continue"/> is called. Continue may be called
-             from inside the <see cref="P:Yarn.Dialogue.LineHandler"/> or <see
-             cref="P:Yarn.Dialogue.CommandHandler"/>, or may be called at any future time.</item>
-            
-             <item>The <see cref="P:Yarn.Dialogue.OptionsHandler"/> is called. When this occurs,
-             the Dialogue is waiting for the user to specify which of the options
-             has been selected, and <see cref="M:Yarn.Dialogue.SetSelectedOption(System.Int32)"/> must be
-             called before <see cref="M:Yarn.Dialogue.Continue"/> is called again.)</item>
-            
-             <item>The Program reaches its end. When this occurs, <see
-             cref="M:Yarn.Dialogue.SetNode(System.String)"/> must be called before <see
-             cref="M:Yarn.Dialogue.Continue"/> is called again.</item>
-            
-             <item>An error occurs while executing the Program.</item>
-             </list>
-            
-             <para>This method has no effect if it is called while the <see
-             cref="T:Yarn.Dialogue"/> is currently in the process of executing
-             instructions.</para>
-             </remarks>
-             <seealso cref="T:Yarn.LineHandler"/>
-             <seealso cref="T:Yarn.OptionsHandler"/>
-             <seealso cref="T:Yarn.CommandHandler"/>
-             <seealso cref="T:Yarn.NodeCompleteHandler"/>
-             <seealso cref="T:Yarn.DialogueCompleteHandler"/>
-        </member>
-        <member name="M:Yarn.Dialogue.Stop">
-            <summary>
-            Immediately stops the <see cref="T:Yarn.Dialogue"/>.
-            </summary>
-        </member>
-        <member name="P:Yarn.Dialogue.NodeNames">
-            <summary>
-            Gets the names of the nodes in the currently loaded Program.
-            </summary>
-            <remarks>If no program is currently loaded, an empty collection is
-            returned.</remarks>
-        </member>
-        <member name="P:Yarn.Dialogue.CurrentNode">
-            <summary>
-            Gets the name of the node that this Dialogue is currently executing.
-            </summary>
-            <remarks>If <see cref="M:Yarn.Dialogue.Continue"/> has never been called, this value
-            will be <see langword="null"/>.</remarks>
-        </member>
-        <member name="M:Yarn.Dialogue.GetStringIDForNode(System.String)">
-            <summary>
-            Returns the string ID that contains the original, uncompiled source
-            text for a node.
-            </summary>
-            <param name="nodeName">The name of the node.</param>
-            <returns>The string ID.</returns>
-            <remarks>
-            <para>
-            A node's source text will only be present in the string table if its
-            <c>tags</c> header contains <c>rawText</c>.
-            </para>
-            <para>
-            Because the <see cref="T:Yarn.Dialogue"/> class is designed to be unaware
-            of the contents of the string table, this method does not test to
-            see if the string table contains an entry with the line ID. You will
-            need to test for that yourself.
-            </para>
-            </remarks>
-        </member>
-        <member name="M:Yarn.Dialogue.GetTagsForNode(System.String)">
-            <summary>
-            Returns the tags for the node <paramref name="nodeName"/>.
-            </summary>
-            <remarks>
-            The tags for a node are defined by setting the <c>tags</c> header in
-            the node's source code. This header must be a space-separated list.
-            </remarks>
-            <param name="nodeName">The name of the node.</param>
-            <returns>The node's tags, or <see langword="null"/> if the node is
-            not present in the Program.</returns>
-        </member>
-        <member name="M:Yarn.Dialogue.GetHeaderValue(System.String,System.String)">
-            <summary>
-            Gets the value of the header named <paramref name="headerName"/> on
-            the node named <paramref name="nodeName"/>, or <see
-            langword="null"/> if the header can't be found.
-            </summary>
-            <remarks>If the node has more than one header named <paramref
-            name="headerName"/>, the first one is used.</remarks>
-            <param name="nodeName">The name of the node.</param>
-            <param name="headerName">The name of the header.</param>
-            <returns>The value of the first header on the node with the
-            specified header value.</returns>
-            <exception cref="T:System.InvalidOperationException">Thrown when the program
-            is not loaded, the program contains no nodes, or the program does
-            not contain a node named <paramref name="nodeName"/>.</exception>
-        </member>
-        <member name="M:Yarn.Dialogue.GetHeaders(System.String)">
-            <summary>
-            Gets the collection of headers present on the node named <paramref
-            name="nodeName"/>.
-            </summary>
-            <param name="nodeName">The name of the node to get headers
-            for.</param>
-            <returns>A collection of key-values pairs, each one representing a
-            header on the node.</returns>
-            <exception cref="T:System.InvalidOperationException">Thrown when the program
-            is not loaded, the program contains no nodes, or the program does
-            not contain a node named <paramref name="nodeName"/>.</exception>
-        </member>
-        <member name="M:Yarn.Dialogue.UnloadAll">
-            <summary>
-            Unloads all nodes from the Dialogue.
-            </summary>
-        </member>
-        <member name="M:Yarn.Dialogue.NodeExists(System.String)">
-            <summary>
-            Gets a value indicating whether a specified node exists in the
-            Program.
-            </summary>
-            <param name="nodeName">The name of the node.</param>
-            <returns><see langword="true"/> if a node named <c>nodeName</c>
-            exists in the Program, <see langword="false"/>
-            otherwise.</returns>
-        </member>
-        <member name="M:Yarn.Dialogue.Analyse(Yarn.Analysis.Context)">
-            <summary>
-            Begins analysis of the <see cref="P:Yarn.Dialogue.Program"/> by the <paramref name="context"/>
-            </summary>
-            <param name="context">The Context that performs the analysis</param>
-        </member>
-        <member name="M:Yarn.Dialogue.TryGetSmartVariable``1(System.String,``0@)">
-            <inheritdoc />
-        </member>
-        <member name="M:Yarn.Dialogue.GetSaliencyOptionsForNodeGroup(System.String)">
-            <summary>
-            Queries the <see cref="T:Yarn.Dialogue"/> for what content could possibly
-            run if the node group nodeGroup was run.
-            </summary>
-            <remarks>
-            <para>This method evaluates all nodes in the given node group, and
-            returns a <see cref="T:Yarn.Saliency.ContentSaliencyOption"/> object for
-            each node. This object contains the current number of passing and
-            failing 'when' clauses on the node, as well as the complexity score
-            for that node. This is the same information that's passed to a <see
-            cref="T:Yarn.Saliency.IContentSaliencyStrategy"/> object's <see
-            cref="M:Yarn.Saliency.IContentSaliencyStrategy.QueryBestContent(System.Collections.Generic.IEnumerable{Yarn.Saliency.ContentSaliencyOption})"/>
-            method. This method is read-only, and calling it will not modify any
-            variable state.
-            </para>
-            <para>Note that this method does not filter its output, and may
-            include content options whose <see
-            cref="P:Yarn.Saliency.ContentSaliencyOption.FailingConditionValueCount"/>
-            is greater than zero. It's up to the caller of this function to
-            filter out these options if they're not wanted.</para> 
-            <para>
-            This method can be used to see if <em>any</em> content will appear
-            when a given node group is run. If the collection returned by this
-            method is empty, then running this node group will not result in any
-            content. This can be used, for example, to decide whether to show a
-            'character can be spoken to' indicator. You can also examine the
-            individal <see cref="T:Yarn.Saliency.ContentSaliencyOption"/> objects to
-            see if any content is available that passes a filter, such as
-            whether content might appear that has a user-defined 'plot critical'
-            tag.
-            </para> 
-            </remarks>
-            <param name="nodeGroup">The name of the node group to get available
-            content for.</param>
-            <returns>A collection of <see
-            cref="T:Yarn.Saliency.ContentSaliencyOption"/> objects that may appear if
-            and when the node group <paramref name="nodeGroup"/> is run.
-            </returns>
-            <exception cref="T:System.ArgumentException">Thrown when <paramref
-            name="nodeGroup"/> is not a valid node name.</exception>
-        </member>
-        <member name="M:Yarn.Dialogue.HasSalientContent(System.String)">
-            <summary>
-            Returns if the node group has any potential nodes to be run based on the current salient selector.
-            </summary>
-            <param name="nodeGroup">The name of the node group.</param>
-            <returns>True if there is any salient content for the requested node group</returns>
+            <exception cref="T:System.InvalidOperationException">If there is no node currently set as the entry point this method throws</exception>
+            <seealso cref="M:Yarn.Dialogue.StartDialogue(System.String,System.Threading.CancellationToken)"/>
         </member>
         <member name="M:Yarn.Dialogue.IsNodeGroup(System.String)">
             <summary>
-            Gets a value indicating whether <paramref name="nodeName"/> is the
-            name of a valid node group in the program.
+            Works out if the node is part of a node group or not.
+            If the node isn't a valid node will always return false.
             </summary>
-            <param name="nodeName">The name of the node group to check.</param>
-            <returns><see langword="true"/> if <paramref name="nodeName"/> is
-            the name of a node group; <see langword="false"/>
-            otherwise.</returns>
-            <exception cref="T:System.InvalidOperationException">Thrown when <see
-            cref="P:Yarn.Dialogue.Program"/> is null.</exception>
+            <param name="nodeName">The node whos node groupedipidty you are curious about</param>
+            <returns>true if the requested node is part of a node group</returns>
+            <exception cref="T:System.InvalidOperationException">Throws if there is no program set</exception>
         </member>
-        <member name="F:Yarn.Dialogue.StandardLibrary.Random">
+        <member name="M:Yarn.Dialogue.IsNodeVisited(System.String)">
             <summary>
-            The internal random number generator used by functions like
-            'random' and 'dice'.
+            Works out if the node has been visited.
             </summary>
+            <param name="nodeName">The node whos visitation you are curious about</param>
+            <returns>True if the node has been visited at least once</returns>
+            <seealso cref="M:Yarn.Dialogue.GetNodeVisitCount(System.String)"/>
+        </member>
+        <member name="M:Yarn.Dialogue.GetNodeVisitCount(System.String)">
+            <summary>
+            Works out how many times the node has been visited.
+            </summary>
+            <param name="nodeName">the node whos visitation count you are cirous about</param>
+            <returns>0 if the node has never been visited, otherwise the number of times the node has been visited</returns>
+            <seealso cref="M:Yarn.Dialogue.IsNodeVisited(System.String)"/>
+        </member>
+        <member name="M:Yarn.Dialogue.HasAnyContent(System.String)">
+            <summary>
+            Determines if the requested node group has any content to show.
+            </summary>
+            <remarks>
+            This may return false for any number of reasons including:
+            <list type="bullet">
+            <item> the requested node is not a node or nodegroup </item>
+            <item> the node group has no elements </item>
+            <item> the node group has been fully exhausted according to the <see cref="P:Yarn.Dialogue.ContentSaliencyStrategy"/> </item>
+            <item> there is only failing content according to the <see cref="P:Yarn.Dialogue.ContentSaliencyStrategy"/> </item>
+            </list>
+            </remarks>
+            <param name="nodeGroup">The node group to check for content</param>
+            <returns>True if there is content to show, false otherwise</returns>
+        </member>
+        <member name="M:Yarn.Dialogue.GetSaliencyOptionsForNodeGroup(System.String)">
+            <summary>
+            Returns the list of salient options inside a node groups
+            </summary>
+            <param name="nodeGroup">The node group you want the salient content from</param>
+            <returns>Collection of salient content inside the node group, may be a single item if the requested nodegroup is just a single node</returns>
+            <exception cref="T:System.ArgumentException">If the requested nodegroup isn't a node</exception>
+        </member>
+        <member name="M:Yarn.Dialogue.NodeExists(System.String)">
+            <summary>
+            Determins if the requested node exists in the dialogue
+            </summary>
+            <param name="nodeName">the node whos existence you are curious about</param>
+            <returns>True if the node exists, false otherwise</returns>
+        </member>
+        <member name="M:Yarn.Dialogue.TryGetSmartVariable``1(System.String,``0@)">
+            <summary>
+            Attempts to retrieve the requested smart variable's current value
+            </summary>
+            <typeparam name="T">The type of the smart varible, must match the type of the variable itself or be convertible to that type</typeparam>
+            <param name="name">The name of the smart variable</param>
+            <param name="result">the smart variable itself</param>
+            <returns>True if it was possible to retrieve the smart variable</returns>
+        </member>
+        <member name="M:Yarn.Dialogue.HandleLine(Yarn.Line,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.HandleOptions(Yarn.OptionSet,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.HandleCommand(Yarn.Command,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.HandleNodeStart(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.HandleNodeComplete(System.String,System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.HandleDialogueComplete">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.PrepareForLines(System.Collections.Generic.List{System.String},System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.CanCallFunction(System.String)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.InvokeFunction(System.String,System.IConvertible[],System.Threading.CancellationToken)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Dialogue.UnloadAll">
+            <summary>
+            Wipes the current program
+            </summary>
+        </member>
+        <member name="P:Yarn.Dialogue.CurrentNode">
+            <summary>
+            Returns the current node, or null if one hasn't been set
+            </summary>
+        </member>
+        <member name="M:Yarn.Dialogue.SetNode(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Sets the current node
+            </summary>
+            <param name="node">the requested node</param>
+            <param name="cancellationToken">A token that can be used to cancel the set node operation</param>
+        </member>
+        <member name="M:Yarn.Dialogue.Stop">
+            <summary>
+            Requests the current dialogue stop
+            </summary>
+            <remarks>
+            This cancels the various tokens that are provided to all tasks so dialogue cancellation will percolate outwards from this point
+            </remarks>
+        </member>
+        <member name="M:Yarn.Dialogue.GetHeaders(System.String)">
+            <summary>
+            Returns all headers on the requested node.
+            </summary>
+            <remarks>
+            This exists primarily so that you don't have to dig directly into the compiled protobuf types.
+            </remarks>
+            <param name="nodeName">The node whos headers you covet</param>
+            <returns>The collection of headers as key-value pairs</returns>
+            <exception cref="T:System.InvalidOperationException">Throws if there is no program set</exception>
+        </member>
+        <member name="M:Yarn.Dialogue.GetHeaderValue(System.String,System.String)">
+            <summary>
+            Returns a single value from a single node's header.
+            </summary>
+            <remarks>
+            If you are requesting multiple headers it would be better to use <see cref="M:Yarn.Dialogue.GetHeaders(System.String)"/> and filter that collection.
+            </remarks>
+            <param name="nodeName">The node whos header you covet</param>
+            <param name="headerName">The header upon the requested node</param>
+            <returns>The value of the requested header on the requested node, or null if either the node or header doesn't exist</returns>
+            <exception cref="T:System.InvalidOperationException">Throws if there is no program set</exception>
+        </member>
+        <member name="P:Yarn.Dialogue.NodeNames">
+            <summary>
+            Returns the names of all nodes in the program.
+            </summary>
+            <remarks>
+            Exists so that you don't have to go digging inside the protobuf yourself.
+            </remarks>
         </member>
         <member name="T:Yarn.DialogueException">
             <summary>
             An exception that is thrown by <see cref="T:Yarn.Dialogue"/> when there is an
             error in executing a <see cref="T:Yarn.Program"/>.
             </summary>
-        </member>
-        <member name="T:Yarn.Library">
-            <summary>
-            A collection of functions that can be called from Yarn programs.
-            </summary>
-            <remarks>
-            You do not create instances of this class yourself. The <see
-            cref="T:Yarn.Dialogue"/> class creates one of its own, which you can
-            access via the <see cref="P:Yarn.Dialogue.Library"/> property.
-            </remarks>
-            <seealso cref="T:Yarn.Dialogue"/>
-        </member>
-        <member name="M:Yarn.Library.GetFunction(System.String)">
-            <summary>
-            Returns a <see cref="T:System.Delegate"/> with a given name.
-            </summary>
-            <param name="name">The name of the function to
-            retrieve.</param>
-            <returns>The <see cref="T:System.Delegate"/>.</returns>
-            <throws cref="T:System.InvalidOperationException">Thrown when a function
-            named <c>name</c> is not present in the library.</throws>
-        </member>
-        <member name="M:Yarn.Library.ImportLibrary(Yarn.Library)">
-            <summary>
-            Loads functions from another <see cref="T:Yarn.Library"/>.
-            </summary>
-            <param name="otherLibrary">The library to import functions from.</param>
-            <remarks>
-            If the other library contains a function with the same name as
-            one in this library, the function in the other library takes
-            precedence.
-            </remarks>
-        </member>
-        <member name="M:Yarn.Library.RegisterFunction``1(System.String,System.Func{``0})">
-            <summary>
-            Registers a new function that returns a value, which can be
-            called from a Yarn program.
-            </summary>
-            <param name="name">The name of the function.</param>
-            <param name="implementation">The method to
-            be invoked when the function is called.</param>
-            <typeparam name="TResult">The return type of the
-            function.</typeparam>
-            <exception cref="T:System.ArgumentException">Thrown when a function
-            named <paramref name="name"/> already exists in the <see
-            cref="T:Yarn.Library"/>.</exception>
-            <exception cref="T:System.ArgumentNullException">Thrown when name is
-            null.</exception>
-        </member>
-        <member name="M:Yarn.Library.RegisterFunction``2(System.String,System.Func{``0,``1})">
-            <inheritdoc cref="M:Yarn.Library.RegisterFunction``1(System.String,System.Func{``0})"/>
-            <typeparam name="TResult">The return type of the function.</typeparam>
-            <typeparam name="T1">The type of the function's first argument.</typeparam>
-        </member>
-        <member name="M:Yarn.Library.RegisterFunction``3(System.String,System.Func{``0,``1,``2})">
-            <inheritdoc cref="M:Yarn.Library.RegisterFunction``1(System.String,System.Func{``0})"/>
-            <typeparam name="TResult">The return type of the function.</typeparam>
-            <typeparam name="T1">The type of the function's first argument.</typeparam>
-            <typeparam name="T2">The type of the function's second argument.</typeparam>
-        </member>
-        <member name="M:Yarn.Library.RegisterFunction``4(System.String,System.Func{``0,``1,``2,``3})">
-            <inheritdoc cref="M:Yarn.Library.RegisterFunction``1(System.String,System.Func{``0})"/>
-            <typeparam name="TResult">The return type of the function.</typeparam>
-            <typeparam name="T1">The type of the function's first argument.</typeparam>
-            <typeparam name="T2">The type of the function's second argument.</typeparam>
-            <typeparam name="T3">The type of the function's third argument.</typeparam>
-        </member>
-        <member name="M:Yarn.Library.RegisterFunction``5(System.String,System.Func{``0,``1,``2,``3,``4})">
-            <inheritdoc cref="M:Yarn.Library.RegisterFunction``1(System.String,System.Func{``0})"/>
-            <typeparam name="TResult">The return type of the function.</typeparam>
-            <typeparam name="T1">The type of the function's first argument.</typeparam>
-            <typeparam name="T2">The type of the function's second argument.</typeparam>
-            <typeparam name="T3">The type of the function's third argument.</typeparam>
-            <typeparam name="T4">The type of the function's fourth argument.</typeparam>
-        </member>
-        <member name="M:Yarn.Library.RegisterFunction``6(System.String,System.Func{``0,``1,``2,``3,``4,``5})">
-            <inheritdoc cref="M:Yarn.Library.RegisterFunction``1(System.String,System.Func{``0})"/>
-            <typeparam name="TResult">The return type of the function.</typeparam>
-            <typeparam name="T1">The type of the function's first argument.</typeparam>
-            <typeparam name="T2">The type of the function's second argument.</typeparam>
-            <typeparam name="T3">The type of the function's third argument.</typeparam>
-            <typeparam name="T4">The type of the function's fourth argument.</typeparam>
-            <typeparam name="T5">The type of the function's fifth argument.</typeparam>
-        </member>
-        <member name="M:Yarn.Library.RegisterFunction(System.String,System.Delegate)">
-            <inheritdoc cref="M:Yarn.Library.RegisterFunction``1(System.String,System.Func{``0})"/>
-        </member>
-        <member name="M:Yarn.Library.FunctionExists(System.String)">
-            <summary>
-            Gets a value indicating whether this <see cref="T:Yarn.Library"/> contains a function named <c>name</c>.
-            </summary>
-            <param name="name">The name of the function to look for.</param>
-            <returns><c>true</c> if a function exists in this Library; <c>false</c> otherwise.</returns>
-        </member>
-        <member name="M:Yarn.Library.DeregisterFunction(System.String)">
-            <summary>
-            Removes a function from the Library.
-            </summary>
-            <param name="name">The name of the function to remove.</param>
-            <remarks>
-            If no function with the given name is present in the Library,
-            this method does nothing.
-            </remarks>
-        </member>
-        <member name="M:Yarn.Library.RegisterMethods(Yarn.TypeBase)">
-            <summary>
-            Registers the methods found inside a type.
-            </summary>
-            <param name="typeLiteral">The type to register methods from.</param>
-        </member>
-        <member name="M:Yarn.Library.GenerateUniqueVisitedVariableForNode(System.String)">
-            <summary>
-            Generates a unique tracking variable name.
-            This is intended to be used to generate names for visting.
-            Ideally these will very reproduceable and sensible.
-            For now it will be something terrible and easy.
-            </summary>
-            <param name="nodeName">The name of the node that needs to
-            have a tracking variable created.</param>
-            <returns>The new variable name.</returns>
-        </member>
-        <member name="M:Yarn.Library.GenerateUniqueContentViewedVariableName(System.String)">
-            <summary>
-            Gets the name of the boolean variable that stores whether the
-            content identified by lineID has been seen by the player before.
-            </summary>
-            <remarks>
-            The value provided should be the full line ID without the #.
-            So if you have a line <c>Alice: this is my once line &lt;&lt;once&gt;&gt; #line:abc123</c> the input should be <c>"line:abc123"</c>.
-            </remarks>
-            <param name="lineID">The line ID to generate a variable name
-            for.</param>
-            <returns>A variable name.</returns>
-        </member>
-        <member name="M:Yarn.Library.GenerateUniqueCommandBlockViewedVariableName(System.String,System.String,System.Int32)">
-            <summary>
-            Gets the name of the boolean variable that stores whether or not the content inside a once block has been seen by the player before.
-            </summary>
-            <remarks>
-            This is an inherently unstable identifer as it relies of layout attributes of the yarn code.
-            Later versions of Yarn Spinner will likely change how this works to be more stable.
-            Moreso than GenerateUniqueContentViewedVariableName this is only really useful during development.
-            Sorry.
-            </remarks>
-            <param name="sourceFileName">The absolute path to the yarn file that contains the once block.</param>
-            <param name="node">the node that contains the once block.</param>
-            <param name="lineNumber">The line number in the editor that opens the once block.</param>
-            <returns>A variable name.</returns>
         </member>
         <member name="M:Yarn.ICodeDumpHelper.GetStringForKey(System.String)">
             <summary>
@@ -1835,7 +1365,7 @@
             nodes.
             </remarks>
         </member>
-        <member name="M:Yarn.SmartVariableEvaluationVirtualMachine.TryGetSmartVariable``1(System.String,Yarn.IVariableAccess,Yarn.Library,``0@)">
+        <member name="M:Yarn.SmartVariableEvaluationVirtualMachine.TryGetSmartVariable``1(System.String,Yarn.IVariableAccess,Yarn.IDialogueResponder,``0@)">
             <summary>
             Evaluates a smart variable.
             </summary>
@@ -1843,7 +1373,7 @@
             <param name="name">The name of the smart variable.</param>
             <param name="variableAccess">An <see cref="T:Yarn.IVariableAccess"/> object
             that can be used for fetching variable values.</param>
-            <param name="library">A <see cref="T:Yarn.Library"/> containing functions
+            <param name="library">A <see cref="T:Yarn.IDialogueResponder"/> containing functions
             to use while evaluating the variable.</param>
             <param name="result">On return, the computed value of the smart
             variable.</param>
@@ -1858,7 +1388,7 @@
             <exception cref="T:System.InvalidOperationException">Thrown if an error
             occurs during the evaluation of the variable.</exception>
         </member>
-        <member name="M:Yarn.SmartVariableEvaluationVirtualMachine.GetSaliencyOptionsForNodeGroup(System.String,Yarn.IVariableAccess,Yarn.Library)">
+        <member name="M:Yarn.SmartVariableEvaluationVirtualMachine.GetSaliencyOptionsForNodeGroup(System.String,Yarn.IVariableAccess,Yarn.IDialogueResponder)">
             <summary>
             Retrieves a collection of content saliency options available for the
             specified node group.
@@ -1883,6 +1413,164 @@
             <exception cref="T:System.ArgumentException">Thrown when the provided
             <paramref name="nodeGroupName"/> is not a valid node group name in
             the program.</exception>
+        </member>
+        <member name="T:Yarn.StandardLibrary">
+            <summary>
+            Provides definitions and implementations for all the built in functions and operators
+            </summary>
+        </member>
+        <member name="F:Yarn.StandardLibrary.Random">
+            <summary>
+            The internal random number generator used by functions like
+            'random' and 'dice'.
+            </summary>
+        </member>
+        <member name="T:Yarn.StandardLibrary.EngineProvidedFunctionNames">
+            <summary>
+            Contains the names of standard library functions whose implementations are expected to be provided by the game engine.
+            </summary>
+        </member>
+        <member name="F:Yarn.StandardLibrary.EngineProvidedFunctionNames.Visited">
+            <summary>
+            The name of the built-in 'visited' function.
+            </summary>
+        </member>
+        <member name="F:Yarn.StandardLibrary.EngineProvidedFunctionNames.VisitedCount">
+            <summary>
+            The name of the built-in 'visited_count' function.
+            </summary>
+        </member>
+        <member name="M:Yarn.StandardLibrary.AllFunctions">
+            <summary>
+            Creates all function definitions of the built in functions
+            </summary>
+            <returns>A dictionary of every function and it's definition keyed by name</returns>
+            <exception cref="T:System.ArgumentException">If an expected function doesn't exist</exception>
+        </member>
+        <member name="M:Yarn.StandardLibrary.GenerateUniqueVisitedVariableForNode(System.String)">
+            <summary>
+            Generates a unique tracking variable name.
+            This is intended to be used to generate names for visting.
+            Ideally these will very reproduceable and sensible.
+            For now it will be something terrible and easy.
+            </summary>
+            <param name="nodeName">The name of the node that needs to
+            have a tracking variable created.</param>
+            <returns>The new variable name.</returns>
+        </member>
+        <member name="M:Yarn.StandardLibrary.GenerateUniqueContentViewedVariableName(System.String)">
+            <summary>
+            Gets the name of the boolean variable that stores whether the
+            content identified by lineID has been seen by the player before.
+            </summary>
+            <remarks>
+            The value provided should be the full line ID without the #.
+            So if you have a line <c>Alice: this is my once line &lt;&lt;once&gt;&gt; #line:abc123</c> the input should be <c>"line:abc123"</c>.
+            </remarks>
+            <param name="lineID">The line ID to generate a variable name
+            for.</param>
+            <returns>A variable name.</returns>
+        </member>
+        <member name="M:Yarn.StandardLibrary.GenerateUniqueCommandBlockViewedVariableName(System.String,System.String,System.Int32)">
+            <summary>
+            Gets the name of the boolean variable that stores whether or not the content inside a once block has been seen by the player before.
+            </summary>
+            <remarks>
+            This is an inherently unstable identifer as it relies of layout attributes of the yarn code.
+            Later versions of Yarn Spinner will likely change how this works to be more stable.
+            Moreso than GenerateUniqueContentViewedVariableName this is only really useful during development.
+            Sorry.
+            </remarks>
+            <param name="sourceFileName">The absolute path to the yarn file that contains the once block.</param>
+            <param name="node">the node that contains the once block.</param>
+            <param name="lineNumber">The line number in the editor that opens the once block.</param>
+            <returns>A variable name.</returns>
+        </member>
+        <member name="M:Yarn.StandardLibrary.TryGetFunction(System.String,Yarn.FunctionType@)">
+            <summary>
+            Finds the definition (so the parameters and return) for the requested function
+            </summary>
+            <param name="functionName">the name of the function</param>
+            <param name="function">The function definition</param>
+            <returns>true if the function has a definition</returns>
+        </member>
+        <member name="M:Yarn.StandardLibrary.CallFunc(System.String,Yarn.Value[],System.Threading.CancellationToken)">
+            <summary>
+            Invoke the function
+            </summary>
+            <param name="functionName">The name of the function</param>
+            <param name="parameters">the list of parameters the function needs</param>
+            <param name="token">Cancellation token to use</param>
+            <returns>The Yarn Value that is the result of the function</returns>
+            <exception cref="T:System.ArgumentException">If the function doesn't exist in the standard library</exception>
+        </member>
+        <member name="T:Yarn.Operator">
+            <summary>
+            Lists the available operators that can be used with Yarn values.
+            </summary>
+        </member>
+        <member name="F:Yarn.Operator.None">
+            <summary>A unary operator that returns its input.</summary>
+        </member>
+        <member name="F:Yarn.Operator.EqualTo">
+            <summary>A binary operator that represents equality.</summary>
+        </member>
+        <member name="F:Yarn.Operator.GreaterThan">
+            <summary>A binary operator that represents a value being
+            greater than another.</summary>
+        </member>
+        <member name="F:Yarn.Operator.GreaterThanOrEqualTo">
+            <summary>A binary operator that represents a value being
+            greater than or equal to another.</summary>
+        </member>
+        <member name="F:Yarn.Operator.LessThan">
+            <summary>A binary operator that represents a value being less
+            than another.</summary>
+        </member>
+        <member name="F:Yarn.Operator.LessThanOrEqualTo">
+            <summary>A binary operator that represents a value being less
+            than or equal to another.</summary>
+        </member>
+        <member name="F:Yarn.Operator.NotEqualTo">
+            <summary>A binary operator that represents
+            inequality.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Or">
+            <summary>A binary operator that represents a logical
+            or.</summary>
+        </member>
+        <member name="F:Yarn.Operator.And">
+            <summary>A binary operator that represents a logical
+            and.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Xor">
+            <summary>A binary operator that represents a logical exclusive
+            or.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Not">
+            <summary>A binary operator that represents a logical
+            not.</summary>
+        </member>
+        <member name="F:Yarn.Operator.UnaryMinus">
+            <summary>A unary operator that represents negation.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Add">
+            <summary>A binary operator that represents addition.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Minus">
+            <summary>A binary operator that represents
+            subtraction.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Multiply">
+            <summary>A binary operator that represents
+            multiplication.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Divide">
+            <summary>A binary operator that represents division.</summary>
+        </member>
+        <member name="F:Yarn.Operator.Modulo">
+            <summary>A binary operator that represents the remainder
+            operation.</summary>
         </member>
         <member name="T:Yarn.AnyType">
             <summary>
@@ -1921,9 +1609,6 @@
             <inheritdoc/>
         </member>
         <member name="P:Yarn.BooleanType.Description">
-            <inheritdoc/>
-        </member>
-        <member name="P:Yarn.BooleanType.DefaultMethods">
             <inheritdoc/>
         </member>
         <member name="T:Yarn.EnumBase">
@@ -1987,15 +1672,55 @@
             <param name="name">The name of the case.</param>
             <param name="member">The member to add for the given name.</param>
         </member>
+        <member name="T:Yarn.ErrorType">
+            <summary>
+            Represents a type that is an error.
+            </summary>
+            <remarks>
+            The purpose of this type is to be a catchall for any scenario where the type can't be resolved or is impossible
+            </remarks>
+        </member>
+        <member name="M:Yarn.ErrorType.#ctor">
+            <summary>
+            Creates a new error type
+            </summary>
+        </member>
+        <member name="P:Yarn.ErrorType.Name">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.ErrorType.Parent">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.ErrorType.Description">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.ErrorType.DefaultValue">
+            <inheritdoc/>
+        </member>
+        <member name="T:Yarn.ForwardDeclaredType">
+            <summary>
+            A forward-declared type represents a type that is not known ahead of compilation type - that is, it's a type that's declared in the Yarn Spinner script itself. The compiler will resolve it during compilation, or fail with an error if it can't be resolved.
+            </summary>
+        </member>
+        <member name="P:Yarn.ForwardDeclaredType.Name">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.ForwardDeclaredType.Parent">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.ForwardDeclaredType.Description">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.ForwardDeclaredType.TypeMembers">
+            <inheritdoc/>
+        </member>
         <member name="T:Yarn.FunctionType">
             <summary>
             A type that represents a function.
             </summary>
             <remarks>
-            Functions have parameters and a return type, and can be called from
-            script. Instances of this type are created when the host
-            application registers new functions (such as through using the <see
-            cref="M:Yarn.Library.RegisterFunction(System.String,System.Delegate)"/> methods or similar.)
+            Functions have parameters and a return type, and can be called from scripts.
+            These can be created directly or via the Definitions file.
             </remarks>
         </member>
         <member name="P:Yarn.FunctionType.Name">
@@ -2315,52 +2040,6 @@
             Yarn types.
             </summary>
         </member>
-        <member name="T:Yarn.TypeUtil">
-            <summary>
-            Contains utility methods for working with types and their methods.
-            </summary>
-        </member>
-        <member name="M:Yarn.TypeUtil.FindImplementingTypeForMethod(Yarn.IType,System.String)">
-            <summary>
-            Returns the type that contains the actual implementation of the
-            method indicated by <paramref name="methodName"/>, given a type or
-            sub-type.
-            </summary>
-            <remarks>
-            This method checks to see if <paramref name="type"/> contains a
-            concrete implementation of a method named <paramref
-            name="methodName"/>. If it does, <paramref name="type"/> is
-            returned; otherwise, the parent of <paramref name="type"/> is
-            checked, and so on up the hierarchy. If no type in <paramref
-            name="type"/>'s parent chain implements a method named <paramref
-            name="methodName"/>, this method returns <see langword="null"/>.
-            </remarks>
-            <param name="type">The type, or sub-type, to start searching for an
-            implementation for the method.</param>
-            <param name="methodName">The name of the method to search
-            for.</param>
-            <returns>The <see cref="T:Yarn.IType"/> object that contains an
-            implementation of <paramref name="methodName"/>.</returns>
-            <exception cref="T:System.ArgumentNullException">Thrown if <paramref
-            name="type"/> is <see langword="null"/>.</exception>
-            <exception cref="T:System.ArgumentException">Thrown if methodName is <see
-            langword="null"/> or empty.</exception>
-        </member>
-        <member name="M:Yarn.TypeUtil.IsSubType(Yarn.IType,Yarn.IType)">
-            <summary>
-            Checks to see if <paramref name="subType"/> is equal to
-            <paramref name="parentType"/>, or if <paramref
-            name="parentType"/> exists in <paramref name="subType"/>'s type
-            hierarchy.
-            </summary>
-            <param name="parentType">The parent type to check
-            against.</param>
-            <param name="subType">The type to check if it's a subtype of
-            <paramref name="parentType"/>.</param>
-            <returns><see langword="true"/> if <paramref name="subType"/>
-            is the same or a subtype of <paramref name="parentType"/>; <see
-            langword="false"/> otherwise.</returns>
-        </member>
         <member name="T:Yarn.IYarnValue">
             <summary>
             Represents a read-only value in the Yarn Spinner virtual machine.
@@ -2379,6 +2058,12 @@
             A value from inside Yarn.
             </summary>
         </member>
+        <member name="P:Yarn.Value.Type">
+            <summary>
+            The type of this value.
+            Because Yarn has a much simpler list of supported types (numbers, bools, strings) and internally Yarn values are IConvertible without having an associated type we wouldn't know how to handle the value
+            </summary>
+        </member>
         <member name="M:Yarn.Value.#ctor(Yarn.Value)">
             <summary>
             Initializes a new instance of the <see cref="T:Yarn.Value"/> class,
@@ -2395,6 +2080,9 @@
             <param name="value">The value that this <see cref="T:Yarn.Value"/>
             should contain.</param>
         </member>
+        <member name="M:Yarn.Value.#ctor(Yarn.IType,System.IConvertible)">
+            <inheritdoc cref="M:Yarn.Value.#ctor(Yarn.Value)" />
+        </member>
         <member name="M:Yarn.Value.CompareTo(System.Object)">
             <summary>
             Compares this <see cref="T:Yarn.Value"/> to another object. The other object must either be another instance of <see cref="T:Yarn.Value"/>, or <c>null</c>.
@@ -2403,11 +2091,206 @@
             <returns>Returns the same results as <see cref="M:System.IComparable.CompareTo(System.Object)"/>.</returns>
             <exception cref="T:System.ArgumentException">Thrown when <c>obj</c> is not a <see cref="T:Yarn.Value"/>.</exception>
         </member>
+        <member name="M:Yarn.Value.ConvertTo``1">
+            <inheritdoc cref="M:Yarn.Value.ConvertTo(System.Type)" />
+        </member>
+        <member name="M:Yarn.Value.ConvertTo(System.Type)">
+            <summary>
+            Converts a value from it's current form to the requested type
+            </summary>
+            <param name="targetType">The new type</param>
+            <returns>the value now as a converted object</returns>
+        </member>
         <member name="M:Yarn.Value.ToString">
             <summary>
             Converts this value to a string.
             </summary>
             <returns>The string representation of this value</returns>
+        </member>
+        <member name="M:Yarn.Value.GetHashCode">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.op_Implicit(System.String)~Yarn.Value">
+            <summary>
+            Implictly creates a Value from a string
+            </summary>
+        </member>
+        <member name="M:Yarn.Value.op_Implicit(System.Single)~Yarn.Value">
+            <summary>
+            Implictly creates a Value from a float
+            </summary>
+        </member>
+        <member name="M:Yarn.Value.op_Implicit(System.Double)~Yarn.Value">
+            <summary>
+            Implictly creates a Value from a double
+            </summary>
+        </member>
+        <member name="M:Yarn.Value.op_Implicit(System.Int32)~Yarn.Value">
+            <summary>
+            Implictly creates a Value from a int
+            </summary>
+        </member>
+        <member name="M:Yarn.Value.op_Implicit(System.Boolean)~Yarn.Value">
+            <summary>
+            Implictly creates a Value from a bool
+            </summary>
+        </member>
+        <member name="M:Yarn.Value.From(System.IConvertible)">
+            <summary>
+            Creates a new value from any IConvertible
+            </summary>
+            <param name="convertible">The IConvertible desired to be converted into a Yarn value</param>
+            <returns>The Yarn value</returns>
+        </member>
+        <member name="M:Yarn.Value.GetTypeCode">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToBoolean(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToByte(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToChar(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToDateTime(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToDecimal(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToDouble(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToInt16(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToInt32(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToInt64(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToSByte(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToSingle(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToString(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToType(System.Type,System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToUInt16(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToUInt32(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Value.ToUInt64(System.IFormatProvider)">
+            <inheritdoc />
+        </member>
+        <member name="T:Yarn.ISmartVariableEvaluator">
+            <summary>
+            Contains methods for evaluating the value of smart variables
+            </summary>
+        </member>
+        <member name="M:Yarn.ISmartVariableEvaluator.TryGetSmartVariable``1(System.String,``0@)">
+            <summary>
+            Evaluate the value of a smart variable named <paramref
+            name="name"/>.
+            </summary>
+            <typeparam name="T">The type of the returned value.</typeparam>
+            <param name="name">The name of the variable.</param>
+            <param name="result">On return, contains the returned value of the
+            smart variable, or the <see langword="default"/> value of
+            <typeparamref name="T"/> if a smart variable named <paramref
+            name="name"/> could not be found or its value could not be returned
+            as type <typeparamref name="T"/>.</param>
+            <returns><see langword="true"/> if the smart variable was evaluated,
+            <see langword="false"/> otherwise.</returns>
+        </member>
+        <member name="T:Yarn.IDialogueResponder">
+            <summary>
+            The responder is responsible for handling important dialogue events.
+            This includes all user facing content events (such as lines and options) as well as non-usesr facing events (such as node enters and exits)
+            </summary>
+            <remarks>
+            Without a responder the VM won't know when to continue along to the next piece of content or how to respond to user input.
+            The VM will always await the action of it's responder before continuining onwards.
+            The VM always has the <see cref="T:Yarn.Dialogue"/> as it's default responder but that just logs these events and otherwise forwards the calls onto it's responder on the <see cref="P:Yarn.Dialogue.Responder"/> field.
+            </remarks>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.HandleLine(Yarn.Line,System.Threading.CancellationToken)">
+            <summary>
+            Requests the responder handle the current line and inform the VM when it is done so.
+            </summary>
+            <param name="line">The line encountered</param>
+            <param name="token">The cancellation token for this task</param>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.HandleOptions(Yarn.OptionSet,System.Threading.CancellationToken)">
+            <summary>
+            Requests the responder handle the current option group and tell the VM which option was selected.
+            If <see cref="F:Yarn.Dialogue.NoOptionSelected"/> is returned the option group will be skipped over.
+            </summary>
+            <param name="options">The collection of options for the responder to use in it's selection</param>
+            <param name="token">The cancellation token for this task</param>
+            <returns>The id of the selected option</returns>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.HandleCommand(Yarn.Command,System.Threading.CancellationToken)">
+            <summary>
+            Requests the responder handle the current command and inform the VM when it is done so.
+            </summary>
+            <param name="command">The command encountered</param>
+            <param name="token">The cancellation token for this task</param>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.HandleNodeStart(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Informs the responder that a node has been entered and the VM will await it's processing of this.
+            </summary>
+            <param name="node">The name of the node entered</param>
+            <param name="token">The cancellation token for this task</param>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.HandleNodeComplete(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Informs the responder that a node has been exited and the VM will await it's processing of this.
+            </summary>
+            <param name="node">The name of the node exited</param>
+            <param name="token">The cancellation token for this task</param>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.HandleDialogueComplete">
+            <summary>
+            Informs the responder that dialogue is finishing
+            </summary>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.PrepareForLines(System.Collections.Generic.List{System.String},System.Threading.CancellationToken)">
+            <summary>
+            Informs the responder that the following lines are likely soon to be encountered and it should perform any preparation for their presentation.
+            </summary>
+            <param name="lineIDs">The collection of line ids</param>
+            <param name="token">The cancellation token for this task</param>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.CanCallFunction(System.String)">
+            <summary>
+            Asks the responder if it can handle the function by this name.
+            </summary>
+            <remarks>
+            For the in-built functions the VM will still ask it's responder if it would like to handle them instead allowing for engine specific overrides.
+            </remarks>
+            <param name="functionName">the name of the function</param>
+            <returns>true if the responder can handle the function</returns>
+        </member>
+        <member name="M:Yarn.IDialogueResponder.InvokeFunction(System.String,System.IConvertible[],System.Threading.CancellationToken)">
+            <summary>
+            Asks the responder to run the function, and provides the parameters from the stack and awaits it's completion.
+            </summary>
+            <param name="functionName">the name of the function</param>
+            <param name="parameters">The collection of parameters for this function, the order is the order they were on the stack</param>
+            <param name="token">The cancellation token for this task</param>
+            <returns>The result of the function</returns>
         </member>
         <member name="T:Yarn.Operand">
             <summary>
@@ -2489,94 +2372,6 @@
         <member name="T:Yarn.Operand.ValueOneofCase">
             <summary>Enum of possible cases for the "value" oneof.</summary>
         </member>
-        <member name="T:Yarn.Operator">
-            <summary>
-            Lists the available operators that can be used with Yarn values.
-            </summary>
-        </member>
-        <member name="F:Yarn.Operator.None">
-            <summary>A unary operator that returns its input.</summary>
-        </member>
-        <member name="F:Yarn.Operator.EqualTo">
-            <summary>A binary operator that represents equality.</summary>
-        </member>
-        <member name="F:Yarn.Operator.GreaterThan">
-            <summary>A binary operator that represents a value being
-            greater than another.</summary>
-        </member>
-        <member name="F:Yarn.Operator.GreaterThanOrEqualTo">
-            <summary>A binary operator that represents a value being
-            greater than or equal to another.</summary>
-        </member>
-        <member name="F:Yarn.Operator.LessThan">
-            <summary>A binary operator that represents a value being less
-            than another.</summary>
-        </member>
-        <member name="F:Yarn.Operator.LessThanOrEqualTo">
-            <summary>A binary operator that represents a value being less
-            than or equal to another.</summary>
-        </member>
-        <member name="F:Yarn.Operator.NotEqualTo">
-            <summary>A binary operator that represents
-            inequality.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Or">
-            <summary>A binary operator that represents a logical
-            or.</summary>
-        </member>
-        <member name="F:Yarn.Operator.And">
-            <summary>A binary operator that represents a logical
-            and.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Xor">
-            <summary>A binary operator that represents a logical exclusive
-            or.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Not">
-            <summary>A binary operator that represents a logical
-            not.</summary>
-        </member>
-        <member name="F:Yarn.Operator.UnaryMinus">
-            <summary>A unary operator that represents negation.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Add">
-            <summary>A binary operator that represents addition.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Minus">
-            <summary>A binary operator that represents
-            subtraction.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Multiply">
-            <summary>A binary operator that represents
-            multiplication.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Divide">
-            <summary>A binary operator that represents division.</summary>
-        </member>
-        <member name="F:Yarn.Operator.Modulo">
-            <summary>A binary operator that represents the remainder
-            operation.</summary>
-        </member>
-        <member name="T:Yarn.ISmartVariableEvaluator">
-            <summary>
-            Contains methods for evaluating the value of smart variables
-            </summary>
-        </member>
-        <member name="M:Yarn.ISmartVariableEvaluator.TryGetSmartVariable``1(System.String,``0@)">
-            <summary>
-            Evaluate the value of a smart variable named <paramref
-            name="name"/>.
-            </summary>
-            <typeparam name="T">The type of the returned value.</typeparam>
-            <param name="name">The name of the variable.</param>
-            <param name="result">On return, contains the returned value of the
-            smart variable, or the <see langword="default"/> value of
-            <typeparamref name="T"/> if a smart variable named <paramref
-            name="name"/> could not be found or its value could not be returned
-            as type <typeparamref name="T"/>.</param>
-            <returns><see langword="true"/> if the smart variable was evaluated,
-            <see langword="false"/> otherwise.</returns>
-        </member>
         <member name="F:Yarn.VirtualMachine.State.currentNodeName">
             <summary>The name of the node that we're currently
             in.</summary>
@@ -2598,6 +2393,15 @@
             stack.</summary>
             <param name="v">The value to push onto the stack.</param>
         </member>
+        <member name="M:Yarn.VirtualMachine.State.PushValue(System.String)">
+            <inheritdoc cref="M:Yarn.VirtualMachine.State.PushValue(Yarn.Value)" />
+        </member>
+        <member name="M:Yarn.VirtualMachine.State.PushValue(System.Single)">
+            <inheritdoc cref="M:Yarn.VirtualMachine.State.PushValue(Yarn.Value)" />
+        </member>
+        <member name="M:Yarn.VirtualMachine.State.PushValue(System.Boolean)">
+            <inheritdoc cref="M:Yarn.VirtualMachine.State.PushValue(Yarn.Value)" />
+        </member>
         <member name="M:Yarn.VirtualMachine.State.PopValue">
             <summary>Removes a value from the top of the stack, and
             returns it.</summary>
@@ -2611,57 +2415,93 @@
         <member name="M:Yarn.VirtualMachine.State.ClearStack">
             <summary>Clears the stack.</summary>
         </member>
+        <member name="M:Yarn.VirtualMachine.State.PushCallStack">
+            <summary>
+            Pushes the current node and counter as a callsite onto the call stack
+            </summary>
+        </member>
         <member name="M:Yarn.VirtualMachine.ResetState">
             Reset the state of the VM
+        </member>
+        <member name="P:Yarn.VirtualMachine.Responder">
+            <summary>
+            The VM's responder, responsible for handling all dialogue events
+            </summary>
+        </member>
+        <member name="P:Yarn.VirtualMachine.VariableStorage">
+            <summary>
+            Current variable storage
+            </summary>
+        </member>
+        <member name="P:Yarn.VirtualMachine.LogDebugMessage">
+            <summary>
+            Logger for debug messages
+            </summary>
+        </member>
+        <member name="P:Yarn.VirtualMachine.LogErrorMessage">
+            <summary>
+            Logger for error messages
+            </summary>
         </member>
         <member name="P:Yarn.VirtualMachine.Program">
             <summary>
             The <see cref="P:Yarn.VirtualMachine.Program"/> that this virtual machine is running.
             </summary>
         </member>
-        <member name="F:Yarn.VirtualMachine.ExecutionState.Stopped">
+        <member name="P:Yarn.VirtualMachine.CurrentNodeName">
             <summary>
-            The VirtualMachine is not running a node.
+            The current node, or null if one hasn't been set
             </summary>
         </member>
-        <member name="F:Yarn.VirtualMachine.ExecutionState.WaitingOnOptionSelection">
+        <member name="P:Yarn.VirtualMachine.ContentSaliencyStrategy">
             <summary>
-            The VirtualMachine is waiting on option selection. Call
-            <see cref="M:Yarn.VirtualMachine.SetSelectedOption(System.Int32)"/> before calling <see
-            cref="M:Yarn.VirtualMachine.Continue"/>.
+            the current saliency strategy
             </summary>
         </member>
-        <member name="F:Yarn.VirtualMachine.ExecutionState.WaitingForContinue">
+        <member name="F:Yarn.VirtualMachine.dialogueCancellationSource">
             <summary>
-            The VirtualMachine has finished delivering content to the
-            client game, and is waiting for <see cref="M:Yarn.VirtualMachine.Continue"/> to
-            be called.
+            when dialogue is initiated this will also be configured and when dialogue is requested to be ended this will also be cancelled.
+            This is the main source of all tokens provided from the VM upwards through the dialogue and responders
             </summary>
         </member>
-        <member name="F:Yarn.VirtualMachine.ExecutionState.DeliveringContent">
+        <member name="M:Yarn.VirtualMachine.SetNode(System.String,System.Threading.CancellationToken)">
             <summary>
-            The VirtualMachine is delivering a line, options, or a
-            commmand to the client game.
+            Sets the current node and clears the VMs internal state
             </summary>
+            <param name="nodeName">The new node</param>
+            <param name="cancellationToken">A token that can be used to cancel the setup task</param>
         </member>
-        <member name="F:Yarn.VirtualMachine.ExecutionState.Running">
+        <member name="M:Yarn.VirtualMachine.Stop">
             <summary>
-            The VirtualMachine is in the middle of executing code.
+            Stops the current running dialogue and resets the VM state
             </summary>
+            <remarks>
+            Does so by cancelling any existing tokens, so cancellation will ripple outwards from this call.
+            </remarks>
         </member>
-        <member name="M:Yarn.VirtualMachine.Continue">
-            Resumes execution.
-        </member>
-        <member name="M:Yarn.VirtualMachine.CheckCanContinue">
+        <member name="M:Yarn.VirtualMachine.Start(System.Threading.CancellationToken)">
             <summary>
-            Runs a series of tests to see if the <see
-            cref="T:Yarn.VirtualMachine"/> is in a state where <see
-            cref="M:Yarn.VirtualMachine.Continue"/> can be called. Throws an exception if it
-            can't.
+            Starts the dialogue from the current node.
             </summary>
-            <throws cref="T:Yarn.DialogueException">Thrown when the <see
-            cref="T:Yarn.VirtualMachine"/> is not in a state where <see
-            cref="M:Yarn.VirtualMachine.Continue"/> could be called.</throws>
+            <remarks>
+            This task will run until the dialogue finishes or is stopped.
+            </remarks>
+            <exception cref="T:Yarn.DialogueException">Throws if there is already dialogue running</exception>
+        </member>
+        <member name="M:Yarn.VirtualMachine.CallFunction(System.String,System.Collections.Generic.Stack{Yarn.Value},Yarn.IDialogueResponder,System.Threading.CancellationToken)">
+            <summary>
+            Invokes the requested function and returns it's value back to the VM
+            </summary>
+            <remarks>
+            Will attempt to resolve the function through it's responder first so that if there are any engine specific function overloads they can be handled, and then uses the <see cref="T:Yarn.StandardLibrary"/> which has the built in functions.
+            </remarks>
+            <param name="functionName">the name of the function</param>
+            <param name="state">The current VM stack</param>
+            <param name="responder">the responder of the VM</param>
+            <param name="token">The cancellation token for this task</param>
+            <returns>The new value to be pushed onto the stack</returns>
+            <exception cref="T:System.InvalidOperationException">thrown when the returned value is of a type we can't handle</exception>
+            <exception cref="T:System.ArgumentException">Thrown when the requested function is one we don't know about and neither does our responder</exception>
         </member>
         <member name="T:Yarn.YarnSpinnerReflection">
             <summary>Holder for reflection information generated from yarn_spinner.proto</summary>
@@ -3124,7 +2964,7 @@
             </summary>
             <remarks>
             You do not create instances of this struct yourself. It is created
-            by objects that can parse markup, such as <see cref="T:Yarn.Dialogue"/>.
+            by objects that can parse markup, such as <see cref="T:Yarn.Markup.LineParser"/>.
             </remarks>
             <seealso cref="M:Yarn.Markup.LineParser.ParseString(System.String,System.String,System.Boolean,System.Boolean,System.Boolean)"/>
         </member>
@@ -3428,7 +3268,7 @@
         </member>
         <member name="P:Yarn.Markup.MarkupValue.FloatValue">
             <summary>Gets the float value of this property.</summary>
-            /// <remarks>
+            <remarks>
             This property is only defined when the property's <see
             cref="P:Yarn.Markup.MarkupValue.Type"/> is <see cref="F:Yarn.Markup.MarkupValueType.Float"/>.
             </remarks>

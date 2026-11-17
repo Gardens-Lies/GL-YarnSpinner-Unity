@@ -46,10 +46,10 @@ namespace Yarn.Unity.LineAdvancerInput
             {
                 return;
             }
-            if (InputSystemAvailability.GetKeyDown(hurryUpLineKeyCode)) { lineAdvancer.OnInputHurryUpLines(); }
-            if (InputSystemAvailability.GetKeyDown(nextLineKeyCode)) { lineAdvancer.OnInputNextContent(); }
-            if (InputSystemAvailability.GetKeyDown(hurryUpOptionsKeyCode)) { lineAdvancer.OnInputHurryUpOptions(); }
-            if (InputSystemAvailability.GetKeyDown(cancelDialogueKeyCode)) { lineAdvancer.OnInputCancelDialogue(); }
+            if (InputSystemAvailability.GetKeyDown(hurryUpLineKeyCode)) { lineAdvancer.RequestHurryUpContent(); }
+            if (InputSystemAvailability.GetKeyDown(nextLineKeyCode)) { lineAdvancer.RequestNextContent(); }
+            if (InputSystemAvailability.GetKeyDown(hurryUpOptionsKeyCode)) { lineAdvancer.RequestHurryUpContent(); }
+            if (InputSystemAvailability.GetKeyDown(cancelDialogueKeyCode)) { lineAdvancer.RequestDialogueCancellation(); }
         }
 
         public void OnDialogueStarted() { }

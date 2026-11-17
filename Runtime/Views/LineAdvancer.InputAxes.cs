@@ -60,10 +60,10 @@ namespace Yarn.Unity.LineAdvancerInput
                 return;
             }
 
-            if (InputSystemAvailability.GetButtonDown(hurryUpLineAxis)) { lineAdvancer.OnInputHurryUpLines(); }
-            if (InputSystemAvailability.GetButtonDown(nextLineAxis)) { lineAdvancer.OnInputNextContent(); }
-            if (InputSystemAvailability.GetButtonDown(hurryUpOptionsAxis)) { lineAdvancer.OnInputHurryUpOptions(); }
-            if (InputSystemAvailability.GetButtonDown(cancelDialogueAxis)) { lineAdvancer.OnInputCancelDialogue(); }
+            if (InputSystemAvailability.GetButtonDown(hurryUpLineAxis)) { lineAdvancer.RequestHurryUpContent(); }
+            if (InputSystemAvailability.GetButtonDown(nextLineAxis)) { lineAdvancer.RequestNextContent(); }
+            if (InputSystemAvailability.GetButtonDown(hurryUpOptionsAxis)) { lineAdvancer.RequestHurryUpContent(); }
+            if (InputSystemAvailability.GetButtonDown(cancelDialogueAxis)) { lineAdvancer.RequestDialogueCancellation(); }
         }
     }
 }

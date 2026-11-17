@@ -9,6 +9,7 @@ using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEngine;
 using Yarn.Unity;
+using Yarn.Compiler;
 
 #if USE_ADDRESSABLES
 using UnityEditor.AddressableAssets;
@@ -32,6 +33,24 @@ namespace Yarn.Unity.Editor
     /// </summary>
     internal static class YarnProjectUtility
     {
+
+
+        /// <summary>
+        /// Gets file-matching pattern suitable for use in the 'definitions' setting for a project file of the given version.
+        /// </summary>
+        /// <remarks>
+        /// For project files using version 5 or later, this method returns a string representing all generated definitions files in the Unity project.
+        /// For project files using an earlier version, this method returns a string representing all definitions files in the project file's current directory.
+        /// <param name="projectFileVersion">The project file to version.</param>
+        /// <returns>A pattern for finding definitions files.</returns>
+        internal static string GetNewDefinitionsFilePattern(int projectFileVersion)
+        {
+            return projectFileVersion switch
+            {
+                >= Project.YarnSpinnerProjectVersion5 => "${workspaceRoot}/ProjectSettings/Packages/dev.yarnspinner/**/*.ysls.json",
+                _ => "**/*.ysls.json",
+            };
+        }
 
         /// <summary>
         /// Creates a new .yarnproject asset in the same directory as the Yarn
@@ -83,6 +102,10 @@ namespace Yarn.Unity.Editor
             // name ends with a tilde
             // and also ignoring anything that is inside a sample folder
             newProject.ExcludeFilePatterns = new[] { "**/*~/*", "./Samples/Yarn Spinner*/*" };
+
+            // Reference all YSLS files in the Unity project
+            newProject.Definitions ??= new();
+            newProject.Definitions.Add(GetNewDefinitionsFilePattern(newProject.FileVersion));
 
             return newProject;
         }
@@ -683,17 +706,17 @@ namespace Yarn.Unity.Editor
         public static bool OnOpenAsset(EntityId instanceID)
         {
 
-// temporarily disabling the obsolete warning for the GetAssetPath call
-// but only for Unity <6.4, otherwise we want the warning
-// because this code needs to exist across multiple unity versions
-// and it's only an actual concern on 6.4+ we can disable it when earlier
+            // temporarily disabling the obsolete warning for the GetAssetPath call
+            // but only for Unity <6.4, otherwise we want the warning
+            // because this code needs to exist across multiple unity versions
+            // and it's only an actual concern on 6.4+ we can disable it when earlier
 #if !UNITY_6000_4_OR_NEWER
-            #pragma warning disable 0618
+#pragma warning disable 0618
 #endif
             var path = AssetDatabase.GetAssetPath(instanceID);
 
 #if !UNITY_6000_4_OR_NEWER
-            #pragma warning restore 0618
+#pragma warning restore 0618
 #endif
 
             var project = AssetDatabase.LoadAssetAtPath<YarnProject>(path);
@@ -709,7 +732,8 @@ namespace Yarn.Unity.Editor
                 return false;
             }
 
-            var yp = Yarn.Compiler.Project.LoadFromFile(path);
+            var unityProjectRoot = Path.GetDirectoryName(Application.dataPath);
+            var yp = Yarn.Compiler.Project.LoadFromFile(path, unityProjectRoot);
             var files = yp.SourceFiles;
 
             if (files.Any())
@@ -723,17 +747,17 @@ namespace Yarn.Unity.Editor
         [OnOpenAsset(OnOpenAssetAttributeMode.Validate)]
         public static bool OnValidateAsset(EntityId instanceID)
         {
-// temporarily disabling the obsolete warning for the GetAssetPath call
-// but only for Unity <6.4, otherwise we want the warning
-// because this code needs to exist across multiple unity versions
-// and it's only an actual concern on 6.4+ we can disable it when earlier
+            // temporarily disabling the obsolete warning for the GetAssetPath call
+            // but only for Unity <6.4, otherwise we want the warning
+            // because this code needs to exist across multiple unity versions
+            // and it's only an actual concern on 6.4+ we can disable it when earlier
 #if !UNITY_6000_4_OR_NEWER
-            #pragma warning disable 0618
+#pragma warning disable 0618
 #endif
             var path = AssetDatabase.GetAssetPath(instanceID);
 
 #if !UNITY_6000_4_OR_NEWER
-            #pragma warning restore 0618
+#pragma warning restore 0618
 #endif
             var project = AssetDatabase.LoadAssetAtPath<YarnProject>(path);
 

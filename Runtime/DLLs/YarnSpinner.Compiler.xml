@@ -43,13 +43,11 @@
         <member name="M:Yarn.Compiler.BasicBlock.ToString">
             <inheritdoc/>
         </member>
-        <member name="M:Yarn.Compiler.BasicBlock.ToString(Yarn.Library,Yarn.Compiler.CompilationResult)">
+        <member name="M:Yarn.Compiler.BasicBlock.ToString(Yarn.Compiler.CompilationResult)">
             <summary>
             Gets a string containing the textual description of the instructions
             in this <see cref="T:Yarn.Compiler.BasicBlock"/>.
             </summary>
-            <param name="library">The <see cref="T:Yarn.Library"/> to use when
-            converting instructions to strings.</param>
             <param name="compilationResult">The <see cref="T:Yarn.Compiler.CompilationResult"/>
             that produced <see cref="F:Yarn.Compiler.BasicBlock.Node"/>.</param>
             <returns>A string containing the text version of the
@@ -676,9 +674,10 @@
             An input into a Yarn Spinner compilation.
             </summary>
         </member>
-        <member name="P:Yarn.Compiler.ISourceInput.FileName">
+        <member name="P:Yarn.Compiler.ISourceInput.Name">
             <summary>
             The name of the input.
+            Must be unique across the entire list of all inputs.
             </summary>
         </member>
         <member name="T:Yarn.Compiler.CompilationJob">
@@ -697,19 +696,41 @@
             Represents the contents of a file to compile.
             </summary>
         </member>
-        <member name="P:Yarn.Compiler.CompilationJob.File.FileName">
+        <member name="P:Yarn.Compiler.CompilationJob.File.Name">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.Compiler.CompilationJob.File.Path">
             <summary>
-            The name of the file.
+            The path of the file
             </summary>
-            <remarks>
-            This may be a full path, or just the filename or anything in
-            between. This is useful for diagnostics, and for attributing
-            <see cref="T:Yarn.Line"/> objects to their original source
-            files.</remarks>
+            <remarks> 
+            This can be a relative or absolute path provided other pieces of the pipeline can manage to process it for diagnostic and debug purposes
+            </remarks>
         </member>
         <member name="F:Yarn.Compiler.CompilationJob.File.Source">
             <summary>
             The source code of this file.
+            </summary>
+        </member>
+        <member name="M:Yarn.Compiler.CompilationJob.File.#ctor(System.String)">
+            <summary>
+            Creates a new File from a path, either from an absolute or relative path.
+            </summary>
+            <param name="path">The path to the file. Is mapped to <see cref="P:Yarn.Compiler.CompilationJob.File.Path"/> property.</param>
+        </member>
+        <member name="T:Yarn.Compiler.CompilationJob.Raw">
+            <summary>
+            Represents a <see langword="string"/> being passed in directly for the compiler to use.
+            This is in constrast to loading it from a file.   
+            Mostly used internally for testing.
+            </summary>
+        </member>
+        <member name="P:Yarn.Compiler.CompilationJob.Raw.Name">
+            <inheritdoc/>
+        </member>
+        <member name="F:Yarn.Compiler.CompilationJob.Raw.Source">
+            <summary>
+            The raw string value passed into the compiler
             </summary>
         </member>
         <member name="T:Yarn.Compiler.CompilationJob.Type">
@@ -741,10 +762,9 @@
             parse..
             </summary>
         </member>
-        <member name="F:Yarn.Compiler.CompilationJob.Library">
+        <member name="F:Yarn.Compiler.CompilationJob.Inputs">
             <summary>
-            The <see cref="F:Yarn.Compiler.CompilationJob.Library"/> that contains declarations for
-            functions.
+            Collection of all the inputs that have been provided to the compilation job
             </summary>
         </member>
         <member name="F:Yarn.Compiler.CompilationJob.CompilationType">
@@ -792,44 +812,51 @@
             </summary>
             <see cref="P:Yarn.Compiler.Project.CompilerOptionsData.DiagnosticsSeverity"/> 
         </member>
-        <member name="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String},Yarn.Library)">
+        <member name="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String})">
             <summary>
             Creates a new <see cref="T:Yarn.Compiler.CompilationJob"/> using the contents of a
             collection of files.
             </summary>
             <param name="paths">The paths to the files.</param>
-            <param name="library">The <see cref="F:Yarn.Compiler.CompilationJob.Library"/> containing functions
-            to use for this compilation.</param>
             <returns>A new <see cref="T:Yarn.Compiler.CompilationJob"/>.</returns>
         </member>
         <member name="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.String[])">
-            <inheritdoc cref="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String},Yarn.Library)" path="/summary"/>
-            <inheritdoc cref="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String},Yarn.Library)" path="/param[@name='paths']"/>
-            <inheritdoc cref="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String},Yarn.Library)" path="/returns"/>
+            <inheritdoc cref="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String})" path="/summary"/>
+            <inheritdoc cref="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String})" path="/param[@name='paths']"/>
+            <inheritdoc cref="M:Yarn.Compiler.CompilationJob.CreateFromFiles(System.Collections.Generic.IEnumerable{System.String})" path="/returns"/>
         </member>
-        <member name="M:Yarn.Compiler.CompilationJob.CreateFromInputs(System.Collections.Generic.IEnumerable{Yarn.Compiler.ISourceInput},Yarn.Library,System.Int32)">
+        <member name="M:Yarn.Compiler.CompilationJob.CreateFromInputs(System.Collections.Generic.IEnumerable{Yarn.Compiler.ISourceInput},System.Collections.Generic.IEnumerable{Yarn.Compiler.Declaration},System.Int32)">
             <summary>
             Creates a new <see cref="T:Yarn.Compiler.CompilationJob"/> using the contents of a
             collection of source inputs.
             </summary>
             <param name="inputs">The inputs to the compilation.</param>
-            <param name="library">The <see cref="F:Yarn.Compiler.CompilationJob.Library"/> containing functions
-            to use for this compilation.</param>
+            <param name="declarations">Any external declarations necessary for the compilation</param>
+            <param name="languageVersion">The version of the Yarn language and project</param>
             <returns>A new <see cref="T:Yarn.Compiler.CompilationJob"/>.</returns>
         </member>
-        <member name="M:Yarn.Compiler.CompilationJob.CreateFromString(System.String,System.String,Yarn.Library,System.Int32)">
+        <member name="M:Yarn.Compiler.CompilationJob.CreateFromString(System.String,System.String,System.Collections.Generic.IEnumerable{Yarn.Compiler.Declaration},System.Int32)">
             <summary>
             Creates a new <see cref="T:Yarn.Compiler.CompilationJob"/> using the contents of a
             string.
             </summary>
-            <param name="fileName">The name to assign to the compiled
+            <param name="inputName">The name to assign to the compiled
             file.</param>
             <param name="source">The text to compile.</param>
-            <param name="library">Library of function definitions to use during
-            compilation.</param>
+            <param name="declarations">Any external declarations necessary for the compilation</param>
             <param name="languageVersion">The version of the Yarn language to
             use.</param>
             <returns>A new <see cref="T:Yarn.Compiler.CompilationJob"/>.</returns>
+        </member>
+        <member name="M:Yarn.Compiler.CompilationJob.CreateFromProject(Yarn.Compiler.Project)">
+            <summary>
+            Creates a new <see cref="T:Yarn.Compiler.CompilationJob"/> using the contents of a <see cref="T:Yarn.Compiler.Project"/> as it's input
+            </summary>
+            <param name="project">The project to use for compilation</param>
+            <returns></returns>
+        </member>
+        <member name="M:Yarn.Compiler.CompilationJob.CreateFromProject(System.String)">
+            <inheritdoc cref="M:Yarn.Compiler.CompilationJob.CreateFromProject(Yarn.Compiler.Project)"/>
         </member>
         <member name="T:Yarn.Compiler.CompilationResult">
             <summary>
@@ -899,7 +926,7 @@
             compilations when the source file does not change. If you want line
             IDs to remain the same when the source code may be modified in the
             future, add a <c>#line:</c> tag to the line. This may be done by
-            hand, or added using the <see cref="M:Yarn.Compiler.Utility.TagLines(Yarn.Compiler.CompilationJob.File,System.Collections.Generic.HashSet{System.String},ILineTagGenerator,ILineTagGenerator.TagAbortBehaviour)"/> method.
+            hand, or added using the <see cref="M:Yarn.Compiler.Utility.TagLines(Yarn.Compiler.ISourceInput,System.Collections.Generic.HashSet{System.String},Yarn.Compiler.ILineTagGenerator,Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour)"/> method.
             </para>
             </remarks>
         </member>
@@ -908,7 +935,7 @@
             Gets the collection of file-level tags found in the source code.
             </summary>
             <remarks>The keys of this dictionary are the file names (as
-            indicated by the <see cref="P:Yarn.Compiler.CompilationJob.File.FileName"/> property
+            indicated by the <see cref="P:Yarn.Compiler.CompilationJob.File.Name"/> property
             of the <see cref="T:Yarn.Compiler.CompilationJob"/>'s <see
             cref="P:Yarn.Compiler.CompilationJob.Files"/> collection), and the values are the
             file tags associated with that file.
@@ -1005,7 +1032,7 @@
             <seealso cref="T:Yarn.Compiler.CompilationResult"/>
         </member>
         <member name="M:Yarn.Compiler.Compiler.GetContentViewedVariableName(System.String)">
-            <inheritdoc cref="M:Yarn.Library.GenerateUniqueContentViewedVariableName(System.String)"/>
+            <inheritdoc cref="M:Yarn.StandardLibrary.GenerateUniqueContentViewedVariableName(System.String)"/>
         </member>
         <member name="M:Yarn.Compiler.Compiler.AddErrorsForInvalidNodeNames(System.Collections.Generic.List{Yarn.Compiler.FileParseResult},System.Collections.Generic.List{Yarn.Compiler.Diagnostic}@)">
             <summary>
@@ -1017,15 +1044,6 @@
             check.</param>
             <param name="diagnostics">A collection of diagnostics to add
             to.</param>
-        </member>
-        <member name="M:Yarn.Compiler.Compiler.GetDeclarationsFromLibrary(Yarn.Library)">
-            <summary>
-            Returns a collection of <see cref="T:Yarn.Compiler.Declaration"/> structs that
-            describe the functions present in <paramref name="library"/>.
-            </summary>
-            <param name="library">The <see cref="T:Yarn.Library"/> to get declarations
-            from.</param>
-            <returns>The <see cref="T:Yarn.Compiler.Declaration"/> structs found.</returns>
         </member>
         <member name="M:Yarn.Compiler.Compiler.GetTokensFromFile(System.String)">
             <summary>
@@ -1758,6 +1776,11 @@
         <member name="M:Yarn.Compiler.Declaration.ToString">
             <inheritdoc/>
         </member>
+        <member name="T:Yarn.Compiler.Declaration.NameAndTypeComparer">
+            <summary>
+            A simple comparer for declarations that considers them equal if their name and type match
+            </summary>
+        </member>
         <member name="T:Yarn.Compiler.DiagnosticDescriptor">
             <summary>
             Describes a diagnostic message with a unique code and template.
@@ -2441,6 +2464,15 @@
             </list></para>
             </remarks>
         </member>
+        <member name="F:Yarn.Compiler.DiagnosticDescriptor.UseOfUndeclaredFunctionsInV4IsDeprecated">
+            <summary>YS0065: Use of undeclared functions is deprecated</summary>
+            <remarks>
+            <para>Format placeholders:
+            <list type="number">
+            <item>Function name</item>
+            </list></para>
+            </remarks>
+        </member>
         <member name="M:Yarn.Compiler.DiagnosticDescriptor.GetDescriptorDictionary">
             <summary>Returns a dictionary mapping diagnostic codes to their corresponding descriptor object.</summary>
             <remarks>This method is automatically generated.</remarks>
@@ -2690,15 +2722,6 @@
             This is supplied as part of a <see cref="T:Yarn.Compiler.CompilationJob"/>.
             </remarks>
         </member>
-        <member name="P:Yarn.Compiler.FileCompiler.Library">
-            <summary>
-            The Library, which contains the function declarations known to the
-            compiler.
-            </summary>
-            <remarks>
-            This is supplied as part of a <see cref="T:Yarn.Compiler.CompilationJob"/>.
-            </remarks>
-        </member>
         <member name="M:Yarn.Compiler.FileCompiler.#ctor(Yarn.Compiler.FileCompiler.CompilationContext)">
             <summary>
             Initializes a new instance of the <see cref="T:Yarn.Compiler.Compiler"/> class.
@@ -2721,6 +2744,12 @@
             statement that was responsible for emitting this
             instruction.</param>
             <param name="instruction">The instruction to emit.</param>
+        </member>
+        <member name="M:Yarn.Compiler.FileCompiler.Emit(Antlr4.Runtime.IToken,Antlr4.Runtime.IToken,Yarn.Instruction[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.FileCompiler.Emit(Yarn.Instruction)">
+            <inheritdoc />
         </member>
         <member name="M:Yarn.Compiler.FileCompiler.EnterNode(Yarn.Compiler.YarnSpinnerParser.NodeContext)">
             <summary>
@@ -2771,25 +2800,22 @@
         </member>
         <member name="P:Yarn.Compiler.FileParseResult.Name">
             <summary>
-            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='name']"/>
+            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='name']/node()"/>
             </summary>
-        </member>
-        <member name="P:Yarn.Compiler.FileParseResult.FileName">
-            <inheritdoc/>>
         </member>
         <member name="P:Yarn.Compiler.FileParseResult.Tree">
             <summary>
-            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='tree']"/>
+            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='tree']/node()"/>
             </summary>
         </member>
         <member name="P:Yarn.Compiler.FileParseResult.Tokens">
             <summary>
-            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='tokens']"/>
+            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='tokens']/node()"/>
             </summary>
         </member>
         <member name="P:Yarn.Compiler.FileParseResult.Diagnostics">
             <summary>
-            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='tokens']"/>
+            <inheritdoc cref="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})" path="/param[@name='tokens']/node()"/>
             </summary>
         </member>
         <member name="M:Yarn.Compiler.FileParseResult.#ctor(System.String,Antlr4.Runtime.Tree.IParseTree,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.IEnumerable{Yarn.Compiler.Diagnostic})">
@@ -3379,20 +3405,6 @@
         <member name="M:Yarn.Compiler.YarnSpinnerParserBaseListener.ExitSet_statement(Yarn.Compiler.YarnSpinnerParser.Set_statementContext)">
             <summary>
             Exit a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.set_statement"/>.
-            <para>The default implementation does nothing.</para>
-            </summary>
-            <param name="context">The parse tree.</param>
-        </member>
-        <member name="M:Yarn.Compiler.YarnSpinnerParserBaseListener.EnterCall_statement(Yarn.Compiler.YarnSpinnerParser.Call_statementContext)">
-            <summary>
-            Enter a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.call_statement"/>.
-            <para>The default implementation does nothing.</para>
-            </summary>
-            <param name="context">The parse tree.</param>
-        </member>
-        <member name="M:Yarn.Compiler.YarnSpinnerParserBaseListener.ExitCall_statement(Yarn.Compiler.YarnSpinnerParser.Call_statementContext)">
-            <summary>
-            Exit a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.call_statement"/>.
             <para>The default implementation does nothing.</para>
             </summary>
             <param name="context">The parse tree.</param>
@@ -4131,17 +4143,6 @@
             <param name="context">The parse tree.</param>
             <return>The visitor result.</return>
         </member>
-        <member name="M:Yarn.Compiler.YarnSpinnerParserBaseVisitor`1.VisitCall_statement(Yarn.Compiler.YarnSpinnerParser.Call_statementContext)">
-            <summary>
-            Visit a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.call_statement"/>.
-            <para>
-            The default implementation returns the result of calling <see cref="M:Antlr4.Runtime.Tree.AbstractParseTreeVisitor`1.VisitChildren(Antlr4.Runtime.Tree.IRuleNode)"/>
-            on <paramref name="context"/>.
-            </para>
-            </summary>
-            <param name="context">The parse tree.</param>
-            <return>The visitor result.</return>
-        </member>
         <member name="M:Yarn.Compiler.YarnSpinnerParserBaseVisitor`1.VisitCommand_statement(Yarn.Compiler.YarnSpinnerParser.Command_statementContext)">
             <summary>
             Visit a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.command_statement"/>.
@@ -4866,18 +4867,6 @@
             </summary>
             <param name="context">The parse tree.</param>
         </member>
-        <member name="M:Yarn.Compiler.IYarnSpinnerParserListener.EnterCall_statement(Yarn.Compiler.YarnSpinnerParser.Call_statementContext)">
-            <summary>
-            Enter a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.call_statement"/>.
-            </summary>
-            <param name="context">The parse tree.</param>
-        </member>
-        <member name="M:Yarn.Compiler.IYarnSpinnerParserListener.ExitCall_statement(Yarn.Compiler.YarnSpinnerParser.Call_statementContext)">
-            <summary>
-            Exit a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.call_statement"/>.
-            </summary>
-            <param name="context">The parse tree.</param>
-        </member>
         <member name="M:Yarn.Compiler.IYarnSpinnerParserListener.EnterCommand_statement(Yarn.Compiler.YarnSpinnerParser.Command_statementContext)">
             <summary>
             Enter a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.command_statement"/>.
@@ -5405,13 +5394,6 @@
             <param name="context">The parse tree.</param>
             <return>The visitor result.</return>
         </member>
-        <member name="M:Yarn.Compiler.IYarnSpinnerParserVisitor`1.VisitCall_statement(Yarn.Compiler.YarnSpinnerParser.Call_statementContext)">
-            <summary>
-            Visit a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.call_statement"/>.
-            </summary>
-            <param name="context">The parse tree.</param>
-            <return>The visitor result.</return>
-        </member>
         <member name="M:Yarn.Compiler.IYarnSpinnerParserVisitor`1.VisitCommand_statement(Yarn.Compiler.YarnSpinnerParser.Command_statementContext)">
             <summary>
             Visit a parse tree produced by <see cref="M:Yarn.Compiler.YarnSpinnerParser.command_statement"/>.
@@ -5548,6 +5530,21 @@
             </summary>
             <param name="context">The parse tree.</param>
             <return>The visitor result.</return>
+        </member>
+        <member name="P:Yarn.Compiler.ICodeEmitter.CurrentNode">
+            <summary>
+            The Node within the emitted code lives
+            </summary>
+        </member>
+        <member name="P:Yarn.Compiler.ICodeEmitter.CurrentNodeDebugInfo">
+            <summary>
+            Debug information for the <see cref="P:Yarn.Compiler.ICodeEmitter.CurrentNode"/>
+            </summary>
+        </member>
+        <member name="P:Yarn.Compiler.ICodeEmitter.VariableDeclarations">
+            <summary>
+            Any variable declarations necessary for code emission
+            </summary>
         </member>
         <member name="M:Yarn.Compiler.ICodeEmitter.Emit(Antlr4.Runtime.IToken,Antlr4.Runtime.IToken,Yarn.Instruction)">
             <summary>
@@ -5722,6 +5719,12 @@
             The message associated with the warning.
             </summary>
         </member>
+        <member name="M:Yarn.Compiler.IndentAwareLexer.PushMode(System.Int32)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.IndentAwareLexer.PopMode">
+            <inheritdoc />
+        </member>
         <member name="T:Yarn.Compiler.DescriptiveLineTagGenerator">
             <summary>
             Creates line ids in a form that attempts to approximate how a person would manually tag lines.
@@ -5800,11 +5803,135 @@
             </para>
             </remarks>
         </member>
-        <member name="M:Yarn.Compiler.DescriptiveLineTagGenerator.PrepareForLines(System.Collections.Generic.Dictionary{System.String,System.Collections.Generic.List{ILineTagGenerator.LineTagContext}},System.Collections.Generic.HashSet{System.String})">
+        <member name="M:Yarn.Compiler.DescriptiveLineTagGenerator.PrepareForLines(System.Collections.Generic.Dictionary{System.String,System.Collections.Generic.List{Yarn.Compiler.ILineTagGenerator.LineTagContext}},System.Collections.Generic.HashSet{System.String})">
             <inheritdocs/>
         </member>
         <member name="M:Yarn.Compiler.DescriptiveLineTagGenerator.GenerateLineTag(System.String,System.Int32)">
             <inheritdoc/>
+        </member>
+        <member name="T:Yarn.Compiler.ILineTagGenerator">
+            <summary>
+            Line tag generators are responsible for producing unique line IDs in a Yarn
+            Spinner project.
+            </summary>
+        </member>
+        <member name="T:Yarn.Compiler.ILineTagGenerator.LineTaggingException">
+            <summary>
+            Represents a situation where the tagger was unable to create a tag for the line.
+            </summary>
+        </member>
+        <member name="M:Yarn.Compiler.ILineTagGenerator.LineTaggingException.#ctor">
+            <summary>
+            Creates a new LineTaggingException
+            </summary>
+        </member>
+        <member name="M:Yarn.Compiler.ILineTagGenerator.LineTaggingException.#ctor(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Yarn.Compiler.ILineTagGenerator.LineTaggingException.#ctor(System.String,System.Exception)">
+            <inheritdoc/>
+        </member>
+        <member name="M:Yarn.Compiler.ILineTagGenerator.LineTaggingException.#ctor(System.String,System.String,System.Int32)">
+            <inheritdoc/>
+        </member>
+        <member name="P:Yarn.Compiler.ILineTagGenerator.LineTaggingException.Message">
+            <inheritdoc/>
+        </member>
+        <member name="F:Yarn.Compiler.ILineTagGenerator.LineTaggingException.SourceFile">
+            <summary>
+            The Yarn file that caused that the tagging exception.
+            </summary>
+        </member>
+        <member name="F:Yarn.Compiler.ILineTagGenerator.LineTaggingException.LineNumber">
+            <summary>
+            The line number inside of <see cref="F:Yarn.Compiler.ILineTagGenerator.LineTaggingException.SourceFile"/> that caused the exception
+            </summary>
+        </member>
+        <member name="T:Yarn.Compiler.ILineTagGenerator.CompilationTagException">
+            <summary>
+            Represents the specific situation where tagging didn't even begin due to compilation errors in the script.
+            </summary>
+        </member>
+        <member name="P:Yarn.Compiler.ILineTagGenerator.CompilationTagException.Message">
+            <inheritdoc/>
+        </member>
+        <member name="T:Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour">
+            <summary>
+            Represents how Yarn Spinner should handle encountering a <see cref="T:Yarn.Compiler.ILineTagGenerator.LineTaggingException"/> exception during tagging.
+            </summary>
+        </member>
+        <member name="F:Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour.EntireTagging">
+            <summary>
+            The line tagging will be fully aborted. Any changes across all files will be undone.
+            </summary>
+        </member>
+        <member name="F:Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour.CurrentNode">
+            <summary>
+            The line tagging for the current node will be aborted. Any changes inside the current node will be undone but other nodes in the same and other files will be preserved.
+            </summary>
+        </member>
+        <member name="F:Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour.CurrentLine">
+            <summary>
+            The line tagging for the current line will be aborted. All changes in the current node, and all other nodes and files will be preserved.
+            </summary>
+        </member>
+        <member name="T:Yarn.Compiler.ILineTagGenerator.LineTagContext">
+            <summary>
+            Contains contextual information needed for generating a line tag.
+            </summary>
+        </member>
+        <member name="P:Yarn.Compiler.ILineTagGenerator.LineTagContext.Line">
+            <summary>
+            The current line parse statement.
+            </summary>
+            <remarks>
+            This gives your custom taggers access to the same information we use internally, unlikely you'll need this but it exists just in case.
+            A lot of the information contained within the context is already derived from this.
+            </remarks>
+        </member>
+        <member name="P:Yarn.Compiler.ILineTagGenerator.LineTagContext.LineNumber">
+            <summary>
+            The line number inside the file for this specifc line of dialogue.
+            This matches the line number as seen inside an editor.
+            </summary>
+            <remarks>
+            While this can be used as part of your line id generation this is mostly intended to be used for error messaging, as line numbers are very rarely stable.
+            It is highly unlikely for this value to remain the same across multiple tagging runs or edits of Yarn files.
+            Meaning your tagger might have unexpected behaviour across multiple invocations if you are relying on this value.
+            </remarks>
+        </member>
+        <member name="P:Yarn.Compiler.ILineTagGenerator.LineTagContext.SourceFileName">
+            <summary>
+            The name of the file currently being processed.
+            </summary>
+            <remarks>
+            If the tagging is requested as part of string based compilation instead of a file compilation this value will always be &lt;input&gt;.
+            </remarks>
+        </member>
+        <member name="P:Yarn.Compiler.ILineTagGenerator.LineTagContext.LineText">
+            <summary>
+            The text of the line of dialogue
+            </summary>
+        </member>
+        <member name="F:Yarn.Compiler.ILineTagGenerator.LineTagContext.LineID">
+            <summary>
+            The line id of the current line, will only have a value for lines that are already tagged.
+            </summary>
+        </member>
+        <member name="M:Yarn.Compiler.ILineTagGenerator.GenerateLineTag(System.String,System.Int32)">
+            <summary>
+            Generates a unique line tag.
+            </summary>
+            <param name="node">The node in which the line exist</param>
+            <param name="lineIndex">The relative line number of the dialogue.</param>
+            <returns>The generated line tag.</returns>
+        </member>
+        <member name="M:Yarn.Compiler.ILineTagGenerator.PrepareForLines(System.Collections.Generic.Dictionary{System.String,System.Collections.Generic.List{Yarn.Compiler.ILineTagGenerator.LineTagContext}},System.Collections.Generic.HashSet{System.String})">
+            <summary>
+            Called by Yarn Spinner before any line generation is
+            </summary>
+            <param name="LineContexts">The combined information of all nodes and lines</param>
+            <param name="excludedIDs">A collection of strings that should not be used for generation.</param>
         </member>
         <member name="T:Yarn.Compiler.RandomLineTagGenerator">
             <summary>
@@ -5812,7 +5939,7 @@
             string.
             </summary>
         </member>
-        <member name="M:Yarn.Compiler.RandomLineTagGenerator.PrepareForLines(System.Collections.Generic.Dictionary{System.String,System.Collections.Generic.List{ILineTagGenerator.LineTagContext}},System.Collections.Generic.HashSet{System.String})">
+        <member name="M:Yarn.Compiler.RandomLineTagGenerator.PrepareForLines(System.Collections.Generic.Dictionary{System.String,System.Collections.Generic.List{Yarn.Compiler.ILineTagGenerator.LineTagContext}},System.Collections.Generic.HashSet{System.String})">
             <inheritdoc/>
         </member>
         <member name="M:Yarn.Compiler.RandomLineTagGenerator.GenerateLineTag(System.String,System.Int32)">
@@ -6131,6 +6258,11 @@
              A version number representing project version 4 (released with Yarn Spinner 3.2.0).
             </summary>
         </member>
+        <member name="F:Yarn.Compiler.Project.YarnSpinnerProjectVersion5">
+            <summary>
+             A version number representing project version 4 (released with Yarn Spinner 3.3.0).
+            </summary>
+        </member>
         <member name="M:Yarn.Compiler.Project.#ctor">
             <summary>
             Initializes a new instance of the <see cref="T:Yarn.Compiler.Project"/> class.
@@ -6364,6 +6496,55 @@
             to a property on this type.
             </summary>
         </member>
+        <member name="M:Yarn.Compiler.StringOrListOfStringsConverter.Read(System.Text.Json.Utf8JsonReader@,System.Type,System.Text.Json.JsonSerializerOptions)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.StringOrListOfStringsConverter.Write(System.Text.Json.Utf8JsonWriter,System.Collections.Generic.List{System.String},System.Text.Json.JsonSerializerOptions)">
+            <inheritdoc />
+        </member>
+        <member name="T:Yarn.Compiler.Definitions">
+            <summary>
+            Definitions represent external actions that are part of the <see cref="T:Yarn.Compiler.Project" /> and are used in different ways by different parts of Yarn Spinner.
+            These are primarily constructed by providing the YSLS json file but you can manually create one for tests.
+            </summary>
+        </member>
+        <member name="F:Yarn.Compiler.Definitions.functions">
+            <summary>
+            Contains all the different function definitions externally provided by the definitions file.
+            May be empty
+            </summary>
+        </member>
+        <member name="F:Yarn.Compiler.Definitions.commands">
+            <summary>
+            Contains all the commands externally provided by the definitions file.
+            May be empty
+            </summary>
+        </member>
+        <member name="M:Yarn.Compiler.Definitions.#ctor(System.String,System.Int32)">
+            <inheritdoc cref="M:Yarn.Compiler.Definitions.#ctor(System.ReadOnlyMemory{System.Byte},System.Int32)" />
+        </member>
+        <member name="M:Yarn.Compiler.Definitions.#ctor(System.ReadOnlyMemory{System.Byte},System.Int32)">
+            <summary>
+            Creates a new definition from the provided json source
+            </summary>
+            <param name="source">The source JSON of the definitions</param>
+            <param name="projectFileVersion">The version number of the project file</param>
+        </member>
+        <member name="P:Yarn.Compiler.SmartVariableCompiler.CurrentNode">
+            <inheritdoc />
+        </member>
+        <member name="P:Yarn.Compiler.SmartVariableCompiler.CurrentNodeDebugInfo">
+            <inheritdoc />
+        </member>
+        <member name="P:Yarn.Compiler.SmartVariableCompiler.VariableDeclarations">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.SmartVariableCompiler.#ctor(System.Collections.Generic.IDictionary{System.String,Yarn.Compiler.Declaration})">
+            <summary>
+            Creates a new smart variable compiler with the given collection of variable declarations
+            </summary>
+            <param name="variableDeclarations">The current variable declarations, assigned directly to <see cref="P:Yarn.Compiler.SmartVariableCompiler.VariableDeclarations"/></param>
+        </member>
         <member name="M:Yarn.Compiler.SmartVariableCompiler.Compile(Yarn.Compiler.Declaration)">
             <summary>
             Compiles a Declaration describing a smart variable, and produces a
@@ -6374,6 +6555,21 @@
             <returns>A <see cref="T:Yarn.Compiler.NodeCompilationResult"/> that contains the
             generated node for this smart variable and its debugger
             information.</returns>
+        </member>
+        <member name="M:Yarn.Compiler.SmartVariableCompiler.Compile(System.String,System.String,Yarn.Compiler.YarnSpinnerParser.ExpressionContext)">
+            <inheritdoc cref="M:Yarn.Compiler.SmartVariableCompiler.Compile(Yarn.Compiler.Declaration)"/>
+            <param name="sourceFileName">name of the yarn file</param>
+            <param name="nodeName">name of the yarn node</param>
+            <param name="expression">the intial expression</param>
+        </member>
+        <member name="M:Yarn.Compiler.SmartVariableCompiler.Emit(Antlr4.Runtime.IToken,Antlr4.Runtime.IToken,Yarn.Instruction)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.SmartVariableCompiler.Emit(Antlr4.Runtime.IToken,Antlr4.Runtime.IToken,Yarn.Instruction[])">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.SmartVariableCompiler.Emit(Yarn.Instruction)">
+            <inheritdoc />
         </member>
         <member name="T:Yarn.Compiler.StringInfo">
             <summary>
@@ -6450,6 +6646,18 @@
             <param name="shadowID">The ID of the line that this entry is
             shadowing, or null.</param>
         </member>
+        <member name="M:Yarn.Compiler.StringInfo.Equals(Yarn.Compiler.StringInfo)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.StringInfo.Equals(System.Object)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.StringInfo.ToString">
+            <inheritdoc/>
+        </member>
+        <member name="M:Yarn.Compiler.StringInfo.GetHashCode">
+            <inheritdoc/>
+        </member>
         <member name="M:Yarn.Compiler.StringTableManager.RegisterString(Yarn.Compiler.YarnSpinnerParser.Line_statementContext,System.String,System.String,System.String,System.String,System.Int32,System.String[],System.String)">
             <summary>
             Registers a new string in the string table.
@@ -6523,10 +6731,30 @@
             <summary>
             Validates syntax patterns that the parser accepts but are semantically incorrect.
             This includes:
-            - Stray command end markers without matching start markers
-            - Command keywords outside of command blocks
-            - Line content on the same line as non-flow-control commands
+            <list type="bullet"> 
+            <item>Stray command end markers without matching start markers</item>
+            <item>Command keywords outside of command blocks</item>
+            <item>Line content on the same line as non-flow-control commands</item>
+            </list>
             </summary>
+        </member>
+        <member name="P:Yarn.Compiler.SyntaxValidationListener.Diagnostics">
+            <summary>
+            Any diagnostics encountered during validation
+            </summary>
+        </member>
+        <member name="M:Yarn.Compiler.SyntaxValidationListener.#ctor(System.String,Antlr4.Runtime.CommonTokenStream)">
+            <summary>
+            Creates a new syntax validation listener for the given Yarn file
+            </summary>
+            <param name="fileName">the name of the yarn file</param>
+            <param name="tokens">the otken stream</param>
+        </member>
+        <member name="M:Yarn.Compiler.SyntaxValidationListener.EnterLine_statement(Yarn.Compiler.YarnSpinnerParser.Line_statementContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.SyntaxValidationListener.EnterCommand_statement(Yarn.Compiler.YarnSpinnerParser.Command_statementContext)">
+            <inheritdoc />
         </member>
         <member name="T:Yarn.Compiler.TypeCheckerListener">
             <summary>
@@ -6622,7 +6850,7 @@
             <summary>Maps the names of types as they appear in the language
             (string, bool, number) to actual type objects.</summary>
         </member>
-        <member name="M:Yarn.Compiler.TypeCheckerListener.#ctor(System.String,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.List{Yarn.Compiler.Declaration},System.Collections.Generic.List{Yarn.TypeBase},TypeChecker.Substitution,System.Collections.Generic.HashSet{TypeChecker.TypeConstraint},System.Threading.CancellationToken)">
+        <member name="M:Yarn.Compiler.TypeCheckerListener.#ctor(System.String,Antlr4.Runtime.CommonTokenStream,System.Collections.Generic.List{Yarn.Compiler.Declaration},System.Collections.Generic.List{Yarn.TypeBase},TypeChecker.Substitution,System.Collections.Generic.HashSet{TypeChecker.TypeConstraint},System.Int32,System.Threading.CancellationToken)">
             <summary>
             Initializes a new instance of the <see cref="T:Yarn.Compiler.TypeCheckerListener"/>
             class.
@@ -6644,6 +6872,7 @@
             the end of a file.</param>
             <param name="cancellationToken">A token used to indicate that type
             checking should be cancelled.</param>
+            <param name="projectFileVersion">The file version of the project that is being compiled.</param>
         </member>
         <member name="M:Yarn.Compiler.TypeCheckerListener.GetKnownDeclaration(System.String)">
             <summary>
@@ -6661,6 +6890,96 @@
             Adds a file hashtag to the parse result.
             </summary>
             <param name="context">The file hashtag parse node.</param>
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitTitle_header(Yarn.Compiler.YarnSpinnerParser.Title_headerContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitDeclare_statement(Yarn.Compiler.YarnSpinnerParser.Declare_statementContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitValueTrue(Yarn.Compiler.YarnSpinnerParser.ValueTrueContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitValueFalse(Yarn.Compiler.YarnSpinnerParser.ValueFalseContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitValueNumber(Yarn.Compiler.YarnSpinnerParser.ValueNumberContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitValueString(Yarn.Compiler.YarnSpinnerParser.ValueStringContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitValueVar(Yarn.Compiler.YarnSpinnerParser.ValueVarContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitValueTypeMemberReference(Yarn.Compiler.YarnSpinnerParser.ValueTypeMemberReferenceContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitVariable(Yarn.Compiler.YarnSpinnerParser.VariableContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpParens(Yarn.Compiler.YarnSpinnerParser.ExpParensContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpAddSub(Yarn.Compiler.YarnSpinnerParser.ExpAddSubContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpMultDivMod(Yarn.Compiler.YarnSpinnerParser.ExpMultDivModContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpComparison(Yarn.Compiler.YarnSpinnerParser.ExpComparisonContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpEquality(Yarn.Compiler.YarnSpinnerParser.ExpEqualityContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpAndOrXor(Yarn.Compiler.YarnSpinnerParser.ExpAndOrXorContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpNot(Yarn.Compiler.YarnSpinnerParser.ExpNotContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpNegative(Yarn.Compiler.YarnSpinnerParser.ExpNegativeContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitExpValue(Yarn.Compiler.YarnSpinnerParser.ExpValueContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitIf_clause(Yarn.Compiler.YarnSpinnerParser.If_clauseContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitElse_if_clause(Yarn.Compiler.YarnSpinnerParser.Else_if_clauseContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitSet_statement(Yarn.Compiler.YarnSpinnerParser.Set_statementContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitValueFunc(Yarn.Compiler.YarnSpinnerParser.ValueFuncContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitFunction_call(Yarn.Compiler.YarnSpinnerParser.Function_callContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitLineCondition(Yarn.Compiler.YarnSpinnerParser.LineConditionContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitLineOnceCondition(Yarn.Compiler.YarnSpinnerParser.LineOnceConditionContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitOnce_primary_clause(Yarn.Compiler.YarnSpinnerParser.Once_primary_clauseContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitJumpToExpression(Yarn.Compiler.YarnSpinnerParser.JumpToExpressionContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitHeader_when_expression(Yarn.Compiler.YarnSpinnerParser.Header_when_expressionContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitStatement(Yarn.Compiler.YarnSpinnerParser.StatementContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.TypeCheckerListener.ExitDialogue(Yarn.Compiler.YarnSpinnerParser.DialogueContext)">
+            <inheritdoc />
         </member>
         <member name="M:Yarn.Compiler.TypeCheckerListener.ResolveInitialValues(System.Collections.Generic.List{Yarn.Compiler.Declaration}@,System.Collections.Generic.List{Yarn.Compiler.Diagnostic}@)">
             <summary>
@@ -6921,7 +7240,7 @@
             cref="P:Yarn.Compiler.Declaration.Type"/> of any of the declarations is an
             invalid value.</throws>
         </member>
-        <member name="M:Yarn.Compiler.Utility.TagLines(Yarn.Compiler.CompilationJob.File,System.Collections.Generic.HashSet{System.String},ILineTagGenerator,ILineTagGenerator.TagAbortBehaviour)">
+        <member name="M:Yarn.Compiler.Utility.TagLines(Yarn.Compiler.ISourceInput,System.Collections.Generic.HashSet{System.String},Yarn.Compiler.ILineTagGenerator,Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour)">
             <summary>
             Given Yarn source code, adds line tags to the ends of all lines that
             need one and do not already have one.
@@ -6940,8 +7259,8 @@
             <returns>Tuple of the modified source code, with line tags added, an updated list of line IDs that were added, and any tagging exceptions that were encountered during tagging.
             </returns>
         </member>
-        <member name="M:Yarn.Compiler.Utility.TagLines(System.String,System.Collections.Generic.HashSet{System.String},ILineTagGenerator,ILineTagGenerator.TagAbortBehaviour)">
-            <inheritdoc cref="M:Yarn.Compiler.Utility.TagLines(Yarn.Compiler.CompilationJob.File,System.Collections.Generic.HashSet{System.String},ILineTagGenerator,ILineTagGenerator.TagAbortBehaviour)"/>
+        <member name="M:Yarn.Compiler.Utility.TagLines(System.String,System.Collections.Generic.HashSet{System.String},Yarn.Compiler.ILineTagGenerator,Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour)">
+            <inheritdoc cref="M:Yarn.Compiler.Utility.TagLines(Yarn.Compiler.ISourceInput,System.Collections.Generic.HashSet{System.String},Yarn.Compiler.ILineTagGenerator,Yarn.Compiler.ILineTagGenerator.TagAbortBehaviour)"/>
         </member>
         <member name="M:Yarn.Compiler.Utility.ParseSource(System.String)">
             <summary>
@@ -6977,7 +7296,7 @@
             An <see cref="T:Yarn.Compiler.IYarnSpinnerParserListener"/> that produces line tags.
             </summary>
         </member>
-        <member name="M:Yarn.Compiler.Utility.UntaggedLineListener.#ctor(ILineTagGenerator,System.Collections.Generic.HashSet{System.String},Antlr4.Runtime.CommonTokenStream,System.String)">
+        <member name="M:Yarn.Compiler.Utility.UntaggedLineListener.#ctor(Yarn.Compiler.ILineTagGenerator,System.Collections.Generic.HashSet{System.String},Antlr4.Runtime.CommonTokenStream,System.String)">
             <summary>
             Initializes a new instance of the <see
             cref="T:Yarn.Compiler.Utility.UntaggedLineListener"/> class.
@@ -6991,6 +7310,15 @@
             <see cref="T:Antlr4.Runtime.Tree.IParseTree"/> this instance is operating on.</param>
             <param name="sourceFileName">The name of the source file that is
             being operated on.</param>
+        </member>
+        <member name="M:Yarn.Compiler.Utility.UntaggedLineListener.EnterNode(Yarn.Compiler.YarnSpinnerParser.NodeContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.Utility.UntaggedLineListener.ExitNode(Yarn.Compiler.YarnSpinnerParser.NodeContext)">
+            <inheritdoc />
+        </member>
+        <member name="M:Yarn.Compiler.Utility.UntaggedLineListener.ExitLine_statement(Yarn.Compiler.YarnSpinnerParser.Line_statementContext)">
+            <inheritdoc />
         </member>
         <member name="M:Yarn.Compiler.Utility.UntaggedLineListener.IndexOfPreviousTokenOnChannel(Antlr4.Runtime.CommonTokenStream,System.Int32,System.Int32)">
             <summary>
@@ -7010,6 +7338,12 @@
             name="tokenStream"/>, returns the index of the last token in the
             stream.</returns>
         </member>
+        <member name="M:Yarn.Compiler.Utility.UntaggedLineListener.RewrittenNodes">
+            <summary>
+            Runs the line rewritter and returns the rewritten content
+            </summary>
+            <returns>Tuple of the modified source, the identified line tags, and any exceptions encountered during tagging</returns>
+        </member>
         <member name="M:Yarn.Compiler.Utility.ExtractStringBlocks(System.Collections.Generic.IEnumerable{Yarn.Node},Yarn.Compiler.ProjectDebugInfo)">
             <summary>
             Gets the collection of contiguous runs of lines in the provided
@@ -7028,14 +7362,12 @@
             <param name="YarnFileContents">The collection of yarn file content to parse and walk</param>
             <returns>A list of lists of GraphingNode each containing a node, its jumps, and any positional info.</returns>
         </member>
-        <member name="M:Yarn.Compiler.Utility.GetCompiledCodeAsString(Yarn.Program,Yarn.Library,Yarn.Compiler.CompilationResult)">
+        <member name="M:Yarn.Compiler.Utility.GetCompiledCodeAsString(Yarn.Program,Yarn.Compiler.CompilationResult)">
             <summary>
-            Gets a string containing a representation of the compiled bytecode
-            for a <see cref="T:Yarn.Program"/>.
+            Gets a string containing a representation of the compiled bytecode for a <see cref="T:Yarn.Program"/>.
             </summary>
-            <param name="program"></param>
-            <param name="l"></param>
-            <param name="result"></param>
+            <param name="program">The program to be dumped as a string</param>
+            <param name="result">The compilation result, needed for various elements of the dump like the lines</param>
             <returns></returns>
         </member>
         <member name="M:Yarn.Compiler.Utility.GetYarnValue(System.IConvertible)">
@@ -7107,6 +7439,11 @@
             <see cref="F:Yarn.Compiler.GraphingNode.hasPositionalInformation"/> is <see langword="true"/>.
             </summary>
         </member>
+        <member name="T:Yarn.Compiler.CodeGenerationVisitor">
+            <summary>
+            Visitor that performs actual the actual code generation, creating the final compiled form of the <see cref="T:Yarn.Program"/>
+            </summary>
+        </member>
         <member name="M:Yarn.Compiler.CodeGenerationVisitor.EvaluateLineCondition(Yarn.Compiler.YarnSpinnerParser.Line_statementContext,System.String@)">
             <summary>
             Generates code that evaluates any conditions present on the line and
@@ -7149,10 +7486,9 @@
             The content has a regular condition with an expression.
             </summary>
         </member>
-        <member name="P:Yarn.Compiler.DiagnosticsGeneratorVisitor.Diagnostics">
+        <member name="T:Yarn.Compiler.LastLineBeforeOptionsVisitor">
             <summary>
-            Gets the collection of <see cref="T:Yarn.Compiler.Diagnostic"/> objects
-            generated by this object.
+            Visitor for identifying and tagging lines which are preceeding an options group
             </summary>
         </member>
         <member name="T:Yarn.Compiler.LiteralValueVisitor">
@@ -7171,6 +7507,11 @@
             visited by this instance.</param>
             <param name="diagnostics">The list of diagnostics to add to.</param>
         </member>
+        <member name="T:Yarn.Compiler.NodeGroupVisitor">
+            <summary>
+            A visitor that identifies which nodes are in a node group and rewrites them from their convenience name into their canonical name and associates the nodegroup with this new name
+            </summary>
+        </member>
         <member name="T:Yarn.Compiler.NodeMetadataVisitor">
             <summary>
             Extracts node metadata during compilation for language server features.
@@ -7183,6 +7524,11 @@
         <member name="M:Yarn.Compiler.NodeMetadataVisitor.Extract(System.String,Yarn.Compiler.YarnSpinnerParser.DialogueContext)">
             <summary>
             Extracts metadata from a parse tree.
+            </summary>
+        </member>
+        <member name="T:Yarn.Compiler.NodeTrackingVisitor">
+            <summary>
+            Handles tracking calls to vist or visted_count in your Yarn to identify which need to nodes need their jumps tracked
             </summary>
         </member>
         <member name="T:Yarn.Compiler.StringTableGeneratorVisitor">
@@ -7200,122 +7546,6 @@
             Gets the collection of <see cref="T:Yarn.Compiler.Diagnostic"/> objects
             generated by this object.
             </summary>
-        </member>
-        <member name="T:ILineTagGenerator">
-            <summary>
-            Line tag generators are responsible for producing unique line IDs in a Yarn
-            Spinner project.
-            </summary>
-        </member>
-        <member name="T:ILineTagGenerator.LineTaggingException">
-            <summary>
-            Represents a situation where the tagger was unable to create a tag for the line.
-            </summary>
-        </member>
-        <member name="M:ILineTagGenerator.LineTaggingException.#ctor">
-            <summary>
-            Creates a new LineTaggingException
-            </summary>
-        </member>
-        <member name="M:ILineTagGenerator.LineTaggingException.#ctor(System.String)">
-            <inheritdoc/>
-        </member>
-        <member name="M:ILineTagGenerator.LineTaggingException.#ctor(System.String,System.Exception)">
-            <inheritdoc/>
-        </member>
-        <member name="M:ILineTagGenerator.LineTaggingException.#ctor(System.String,System.String,System.Int32)">
-            <inheritdoc/>
-        </member>
-        <member name="P:ILineTagGenerator.LineTaggingException.Message">
-            <inheritdoc/>
-        </member>
-        <member name="F:ILineTagGenerator.LineTaggingException.SourceFile">
-            <summary>
-            The Yarn file that caused that the tagging exception.
-            </summary>
-        </member>
-        <member name="F:ILineTagGenerator.LineTaggingException.LineNumber">
-            <summary>
-            The line number inside of <cref name="SourceFile"/> that caused the exception
-            </summary>
-        </member>
-        <member name="T:ILineTagGenerator.TagAbortBehaviour">
-            <summary>
-            Represents how Yarn Spinner should handle encountering a <cref name="LineTaggingException"/> exception during tagging.
-            </summary>
-        </member>
-        <member name="F:ILineTagGenerator.TagAbortBehaviour.EntireTagging">
-            <summary>
-            The line tagging will be fully aborted. Any changes across all files will be undone.
-            </summary>
-        </member>
-        <member name="F:ILineTagGenerator.TagAbortBehaviour.CurrentNode">
-            <summary>
-            The line tagging for the current node will be aborted. Any changes inside the current node will be undone but other nodes in the same and other files will be preserved.
-            </summary>
-        </member>
-        <member name="F:ILineTagGenerator.TagAbortBehaviour.CurrentLine">
-            <summary>
-            The line tagging for the current line will be aborted. All changes in the current node, and all other nodes and files will be preserved.
-            </summary>
-        </member>
-        <member name="T:ILineTagGenerator.LineTagContext">
-            <summary>
-            Contains contextual information needed for generating a line tag.
-            </summary>
-        </member>
-        <member name="P:ILineTagGenerator.LineTagContext.Line">
-            <summary>
-            The current line parse statement.
-            <remarks>
-            This gives your custom taggers access to the same information we use internally, unlikely you'll need this but it exists just in case.
-            A lot of the information contained within the context is already derived from this.
-            </remarks>
-            </summary>
-        </member>
-        <member name="P:ILineTagGenerator.LineTagContext.LineNumber">
-            <summary>
-            The line number inside the file for this specifc line of dialogue.
-            This matches the line number as seen inside an editor.
-            </summary>
-            <remarks>
-            While this can be used as part of your line id generation this is mostly intended to be used for error messaging, as line numbers are very rarely stable.
-            It is highly unlikely for this value to remain the same across multiple tagging runs or edits of Yarn files.
-            Meaning your tagger might have unexpected behaviour across multiple invocations if you are relying on this value.
-            </remarks>
-        </member>
-        <member name="P:ILineTagGenerator.LineTagContext.SourceFileName">
-            <summary>
-            The name of the file currently being processed.
-            <remarks>
-            If the tagging is requested as part of string based compilation instead of a file compilation this value will always be &lt;input&gt;.
-            </remarks>
-            </summary>
-        </member>
-        <member name="P:ILineTagGenerator.LineTagContext.LineText">
-            <summary>
-            The text of the line of dialogue
-            </summary>
-        </member>
-        <member name="F:ILineTagGenerator.LineTagContext.LineID">
-            <summary>
-            The line id of the current line, will only have a value for lines that are already tagged.
-            </summary>
-        </member>
-        <member name="M:ILineTagGenerator.GenerateLineTag(System.String,System.Int32)">
-            <summary>
-            Generates a unique line tag.
-            </summary>
-            <param name="node">The node in which the line exist</param>
-            <param name="lineIndex">The relative line number of the dialogue.</param>
-            <returns>The generated line tag.</returns>
-        </member>
-        <member name="M:ILineTagGenerator.PrepareForLines(System.Collections.Generic.Dictionary{System.String,System.Collections.Generic.List{ILineTagGenerator.LineTagContext}},System.Collections.Generic.HashSet{System.String})">
-            <summary>
-            Called by Yarn Spinner before any line generation is
-            </summary>
-            <param name="LineContexts">The combined information of all nodes and lines</param>
-            <param name="excludedIDs">A collection of strings that should not be used for generation.</param>
         </member>
         <member name="T:TypeChecker.ConjunctionConstraint">
             <summary>
@@ -7428,6 +7658,11 @@
             they don't provide any additional information to the type solution.
             </remarks>
         </member>
+        <member name="T:TypeChecker.TypeConvertibleConstraint">
+            <summary>
+            A <see cref="T:TypeChecker.TypeConstraint"/> that signifies one type is convertible to another and can be considered the same type
+            </summary>
+        </member>
         <member name="M:TypeChecker.TypeConvertibleConstraint.#ctor(Yarn.IType,Yarn.IType)">
             <summary>
             Initializes a new instance of the <see
@@ -7459,11 +7694,28 @@
         <member name="M:TypeChecker.TypeConvertibleConstraint.Simplify(TypeChecker.Substitution,System.Collections.Generic.IEnumerable{Yarn.TypeBase})">
             <inheritdoc/>
         </member>
+        <member name="T:TypeChecker.TypeEqualityConstraint">
+            <summary>
+            A <see cref="T:TypeChecker.TypeConstraint"/> that represents an equality in an expression.
+            </summary>
+        </member>
         <member name="P:TypeChecker.TypeEqualityConstraint.AllVariables">
             <inheritdoc/>
         </member>
+        <member name="T:TypeChecker.TypeHasMemberConstraint">
+            <summary>
+            A <see cref="T:TypeChecker.TypeConstraint"/> that represents a type with a member.
+            This is mostly used by Enum cases
+            </summary>
+        </member>
         <member name="P:TypeChecker.TypeHasMemberConstraint.AllVariables">
             <inheritdoc/>
+        </member>
+        <member name="T:TypeChecker.TypeHasNameConstraint">
+            <summary>
+            A <see cref="T:TypeChecker.TypeConstraint"/> that represents a type with an explicit name.
+            The most common case of this is when encountering a declaration statement.
+            </summary>
         </member>
         <member name="P:TypeChecker.TypeHasNameConstraint.AllVariables">
             <inheritdoc/>

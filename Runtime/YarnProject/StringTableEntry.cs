@@ -5,12 +5,22 @@ Yarn Spinner is licensed to you under the terms found in the file LICENSE.md.
 using CsvHelper;
 using System.Collections.Generic;
 
+#if UNITY_6000_6_OR_NEWER
+using Unity.Scripting.LifecycleManagement;
+#else
+using Yarn.Unity.Shim;
+#endif
+
 #nullable enable
 
 namespace Yarn.Unity
 {
-    public struct StringTableEntry
+    /// <summary>
+    /// Represents a single entry in the string table
+    /// </summary>
+    public partial struct StringTableEntry
     {
+#region snip
         /// <summary>
         /// The language that the line is written in.
         /// </summary>
@@ -92,7 +102,9 @@ namespace Yarn.Unity
             Comment = s.Comment;
             Language = s.Language;
         }
+#endregion
 
+        [AutoStaticsCleanup]
         private static CsvHelper.Configuration.Configuration? CsvConfiguration;
 
         private static CsvHelper.Configuration.Configuration GetConfiguration()

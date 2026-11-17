@@ -96,21 +96,21 @@ namespace Yarn.Unity.LineAdvancerInput
 
         private void OnHurryUpLinePerformed(UnityEngine.InputSystem.InputAction.CallbackContext ctx)
         {
-            if (LineAdvancer != null) { LineAdvancer.OnInputHurryUpLines(); }
+            if (LineAdvancer != null) { LineAdvancer.RequestHurryUpContent(); }
 
         }
         private void OnHurryUpOptionsPerformed(UnityEngine.InputSystem.InputAction.CallbackContext ctx)
         {
-            if (LineAdvancer != null) { LineAdvancer.OnInputHurryUpOptions(); }
+            if (LineAdvancer != null) { LineAdvancer.RequestHurryUpContent(); }
         }
 
         private void OnNextLinePerformed(UnityEngine.InputSystem.InputAction.CallbackContext ctx)
         {
-            if (LineAdvancer != null) { LineAdvancer.OnInputNextContent(); }
+            if (LineAdvancer != null) { LineAdvancer.RequestNextContent(); }
         }
         private void OnCancelDialoguePerformed(UnityEngine.InputSystem.InputAction.CallbackContext ctx)
         {
-            if (LineAdvancer != null) { LineAdvancer.OnInputCancelDialogue(); }
+            if (LineAdvancer != null) { LineAdvancer.CancelInvoke(); }
         }
 #else // USE_INPUTSYSTEM
         // Define stub methods for ILineAdvancerInput to prevent compiler errors
