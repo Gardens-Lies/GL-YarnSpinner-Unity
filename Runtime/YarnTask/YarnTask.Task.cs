@@ -143,9 +143,11 @@ namespace Yarn.Unity
 
         }
 
-        public static async partial YarnTask<T[]> WhenAll<T>(params YarnTask<T>[] tasks)
+        // Pas d'async ni de lambda ici : une lambda dans une méthode async générique
+        // fait planter UnityLinker (KeyNotFoundException sur <WhenAll>d__N`1).
+        public static partial YarnTask<T[]> WhenAll<T>(params YarnTask<T>[] tasks)
         {
-            return await Task.WhenAll(Array.ConvertAll<YarnTask<T>, Task<T>>(tasks, t => t));
+            return WhenAll((IEnumerable<YarnTask<T>>)tasks);
         }
 
         public static async partial YarnTask<T[]> WhenAll<T>(IEnumerable<YarnTask<T>> tasks)
